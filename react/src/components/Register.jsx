@@ -85,10 +85,10 @@
 
 
 import React, { useState } from 'react';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { useNavigate } from 'react-router-dom';
 
 const Register = ({setAuth}) => {
+  const navigate = useNavigate();
   const [inputs, setInputs] = useState({
     name: '',
     email: '',
@@ -117,15 +117,15 @@ const Register = ({setAuth}) => {
         if (parseRes.token) {
           localStorage.setItem("token", parseRes.token)
           setAuth(true);
-          toast.success('Registration Successful!');
+          navigate('/'); // Redirect to home page after successful registration
         } else {
-          toast.error('Registration Failed: ' + (parseRes.message || 'Please try again'));
+          // Handle registration error (show message to user)
+          console.error("Registration failed");
         }
     } catch (err) {
         console.error(err.message)
-        toast.error('An error occurred during registration');
     }
-  };
+};
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -169,17 +169,6 @@ const Register = ({setAuth}) => {
         <p className="text-center text-gray-600 mt-4">
           Already have an account? <a href="/login" className="text-blue-500 hover:underline">Login</a>
         </p>
-        <ToastContainer 
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-        />
       </div>
     </div>
   );

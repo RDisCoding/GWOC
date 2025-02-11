@@ -5,6 +5,7 @@
 // import Login from './components/Login';
 // import Register from './components/Register';
 // import Dashboard from './components/Dashboard';
+// import Navbar from './components/Navbar';
 
 // const App2 = () => {
 
@@ -37,6 +38,7 @@
 //         <Fragment>
 //         <Router>
 //             <div className="container">
+            
 //                 <Routes>
 //                     <Route 
 //                     path='/login' 
@@ -61,29 +63,20 @@
 
 // export default App2;
 
-
-
-
 import React, {Fragment, useState, useEffect} from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 // Components
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
+import Navbar from './components/Navbar';
 
 const App2 = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     const setAuth = boolean => {
         setIsAuthenticated(boolean);
-        if (boolean) {
-            toast.success('Authentication Successful');
-        } else {
-            toast.info('Logged Out');
-        }
     }
 
     async function isAuth() {
@@ -98,7 +91,6 @@ const App2 = () => {
             parseRes === true ? setIsAuthenticated(true) : setIsAuthenticated(false);
         } catch (err) {
             console.error(err.message)
-            toast.error('Authentication Check Failed');
         }
     }
 
@@ -109,6 +101,7 @@ const App2 = () => {
     return (
         <Fragment>
         <Router>
+            <Navbar isAuthenticated={isAuthenticated} setAuth={setAuth} />
             <div className="container">
                 <Routes>
                     <Route 
@@ -125,17 +118,6 @@ const App2 = () => {
                     />
                 </Routes>
             </div>
-            <ToastContainer 
-                position="top-right"
-                autoClose={3000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-            />
         </Router>
         </Fragment>
     );

@@ -74,12 +74,11 @@
 
 // export default Login;
 
-
 import React, { useState } from 'react';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { useNavigate } from 'react-router-dom';
 
 const Login = ({ setAuth }) => {
+  const navigate = useNavigate();
   const [inputs, setInputs] = useState({
     email: '',
     password: ''
@@ -107,13 +106,13 @@ const Login = ({ setAuth }) => {
         if (parseRes.token) {
           localStorage.setItem("token", parseRes.token);
           setAuth(true);
-          toast.success('Login Successful!');
+          navigate('/'); // Redirect to home page after successful login
         } else {
-          toast.error('Login Failed: Invalid Credentials');
+          // Handle login error (show message to user)
+          console.error("Login failed");
         }
     } catch (err) {
       console.error(err.message);
-      toast.error('An error occurred during login');
     }
   };
 
@@ -150,17 +149,6 @@ const Login = ({ setAuth }) => {
         <p className="text-center text-gray-600 mt-4">
           Don't have an account? <a href="/register" className="text-blue-500 hover:underline">Register</a>
         </p>
-        <ToastContainer 
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-        />
       </div>
     </div>
   );
