@@ -40,10 +40,17 @@ const ProductDetails = () => {
 
   const addToCart = async () => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+  
       const response = await fetch('http://localhost:5000/cart/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'token': token  // Make sure token is being sent
         },
         body: JSON.stringify({
           product_id: product.product_id,
@@ -54,25 +61,35 @@ const ProductDetails = () => {
             variant: selectedVariant,
             nameOnCake: nameOnCake || null
           }
-        }),
-        credentials: 'include' // to include cookies for authentication
+        })
       });
-
+  
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Failed to add to cart');
+        throw new Error(data.error || 'Failed to add to cart');
       }
-
-      // Show success message or update cart counter
-      alert('Product added to cart successfully!');
+  
+      if (data.success) {
+        alert('Product added to cart successfully!');
+      }
+    } catch (err) {
+      console.error('Add to cart error:', err);
+      if (err.message.includes('Not Authorized')) {
+        navigate('/login');
+      } else {
+        alert(err.message || 'Failed to add product to cart');
+      }
+    }
+  };  
+  // The handleBuyNow function remains the same
+  const handleBuyNow = async () => {
+    try {
+      await addToCart();
+      navigate('/cart');
     } catch (err) {
       console.error(err);
-      alert('Failed to add product to cart');
     }
-  };
-
-  const handleBuyNow = async () => {
-    await addToCart();
-    navigate('/cart');
   };
 
   if (loading) {

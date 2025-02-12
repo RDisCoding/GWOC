@@ -7,9 +7,6 @@ CREATE TABLE users (
     user_password VARCHAR(255) NOT NULL
 );
 
---fake user
-INSERT INTO users (user_name, user_email, user_password) VALUES ('test', 'test@gmail.com','test123');
-
 -- Categories table to store different product categories
 CREATE TABLE categories (
     category_id SERIAL PRIMARY KEY,
@@ -145,49 +142,173 @@ CREATE TRIGGER update_cart_item_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+ALTER TABLE cart_items ADD COLUMN customizations JSONB;
+ALTER TABLE products ADD COLUMN is_addon BOOLEAN DEFAULT false;
 
--- -- Cart table to store the main cart information
--- CREATE TABLE carts (
---     id SERIAL PRIMARY KEY,
---     user_id INTEGER NOT NULL REFERENCES users(id),
---     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
---     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
--- );
+-- Current Orders Table (For Active Orders)
+CREATE TABLE current_orders (
+    order_id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(user_id),
+    items JSONB NOT NULL,  -- Stores cart items with product details
+    total DECIMAL(10,2) NOT NULL,
+    pickup_status VARCHAR(20) DEFAULT 'pending' 
+        CHECK (pickup_status IN ('pending', 'preparing', 'ready_for_pickup', 'picked_up')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    contact_phone VARCHAR(20) NOT NULL
+);
 
--- -- Cart items table to store individual items in the cart
--- CREATE TABLE cart_items (
---     id SERIAL PRIMARY KEY,
---     cart_id INTEGER NOT NULL REFERENCES carts(id),
---     product_id INTEGER NOT NULL REFERENCES products(id),
---     quantity INTEGER NOT NULL DEFAULT 1,
---     price_at_time DECIMAL(10,2) NOT NULL, -- Price when added to cart
---     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
---     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
--- );
+-- Order History Table (For Completed Orders)
+CREATE TABLE order_history (
+    order_id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(user_id),
+    items JSONB NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+    picked_up_at TIMESTAMP NOT NULL,  -- Updated field for pick-up completion
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed BOOLEAN DEFAULT false,
+    review_request_sent BOOLEAN DEFAULT false
+);
 
--- -- For hamper/bundle products, we need to track their contents
--- CREATE TABLE cart_item_contents (
---     id SERIAL PRIMARY KEY,
---     cart_item_id INTEGER NOT NULL REFERENCES cart_items(id),
---     content_name VARCHAR(255) NOT NULL,
---     quantity INTEGER NOT NULL DEFAULT 1
--- );
+ALTER TABLE reviews
+ADD COLUMN user_id UUID REFERENCES users(user_id),
+ADD COLUMN display_on_homepage BOOLEAN DEFAULT false;
 
--- -- Trigger to update the updated_at timestamp
--- CREATE OR REPLACE FUNCTION update_updated_at_column()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     NEW.updated_at = CURRENT_TIMESTAMP;
---     RETURN NEW;
--- END;
--- $$ language 'plpgsql';
+-- Table to track user's pending reviews
+CREATE TABLE user_pending_reviews (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(user_id),
+    product_id INTEGER NOT NULL REFERENCES products(product_id),
+    order_id INTEGER NOT NULL,
+    review_status VARCHAR(20) DEFAULT 'pending' 
+        CHECK (review_status IN ('pending', 'completed', 'skipped')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_prompted_at TIMESTAMP,
+    UNIQUE(user_id, product_id, order_id)
+);
 
--- CREATE TRIGGER update_cart_updated_at
---     BEFORE UPDATE ON carts
---     FOR EACH ROW
---     EXECUTE FUNCTION update_updated_at_column();
+-- Update order_history table to include review tracking
+ALTER TABLE order_history 
+ADD COLUMN reviews_processed BOOLEAN DEFAULT false;
 
--- CREATE TRIGGER update_cart_item_updated_at
---     BEFORE UPDATE ON cart_items
---     FOR EACH ROW
---     EXECUTE FUNCTION update_updated_at_column();
+-- Function to automatically create pending reviews after order completion
+CREATE OR REPLACE FUNCTION create_pending_reviews()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Extract products from the JSONB items array and create pending reviews
+    WITH order_products AS (
+        SELECT DISTINCT 
+            (json_array_elements(NEW.items)->>'product_id')::integer as product_id
+        FROM (SELECT NEW.items) i
+    )
+    INSERT INTO user_pending_reviews (user_id, product_id, order_id)
+    SELECT 
+        NEW.user_id,
+        op.product_id,
+        NEW.order_id
+    FROM order_products op;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to create pending reviews when order is completed
+CREATE TRIGGER create_pending_reviews_trigger
+    AFTER INSERT ON order_history
+    FOR EACH ROW
+    EXECUTE FUNCTION create_pending_reviews();
+
+
+
+-- Fix order_id type in user_pending_reviews to match order_history
+ALTER TABLE user_pending_reviews 
+ALTER COLUMN order_id TYPE BIGINT;
+
+-- Drop and recreate the trigger function with JSONB fixes
+DROP TRIGGER IF EXISTS create_pending_reviews_trigger ON order_history;
+DROP FUNCTION IF EXISTS create_pending_reviews();
+
+CREATE OR REPLACE FUNCTION create_pending_reviews()
+RETURNS TRIGGER AS $$
+BEGIN
+    WITH order_products AS (
+        SELECT DISTINCT 
+            (jsonb_array_elements(NEW.items)->>'product_id')::integer as product_id
+    )
+    INSERT INTO user_pending_reviews (user_id, product_id, order_id)
+    SELECT 
+        NEW.user_id,
+        op.product_id,
+        NEW.order_id
+    FROM order_products op;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Recreate the trigger
+CREATE TRIGGER create_pending_reviews_trigger
+    AFTER INSERT ON order_history
+    FOR EACH ROW
+    EXECUTE FUNCTION create_pending_reviews();
+
+-- Make sure order_id types match across tables
+ALTER TABLE current_orders 
+ALTER COLUMN order_id TYPE BIGINT;
+
+ALTER TABLE order_history 
+ALTER COLUMN order_id TYPE BIGINT;
+
+ALTER TABLE user_pending_reviews 
+ALTER COLUMN order_id TYPE BIGINT;
+
+CREATE OR REPLACE FUNCTION create_pending_reviews()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO user_pending_reviews (user_id, product_id, order_id)
+    SELECT 
+        NEW.user_id,
+        (jsonb_array_elements(NEW.items)->>'product_id')::integer,
+        NEW.order_id
+    FROM jsonb_array_elements(NEW.items)
+    GROUP BY 1,2,3;  -- Prevent duplicates
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- revert back code
+-- Revert order_id type change in user_pending_reviews
+ALTER TABLE user_pending_reviews 
+ALTER COLUMN order_id TYPE INTEGER;
+
+-- Drop the trigger and function to revert to the previous state
+DROP TRIGGER IF EXISTS create_pending_reviews_trigger ON order_history;
+DROP FUNCTION IF EXISTS create_pending_reviews();
+
+-- Restore the previous function if available (Replace this with the previous logic if known)
+CREATE OR REPLACE FUNCTION create_pending_reviews()
+RETURNS TRIGGER AS $$  
+BEGIN  
+    -- Assuming the previous logic, update this accordingly
+    INSERT INTO user_pending_reviews (user_id, product_id, order_id)
+    VALUES (NEW.user_id, (NEW.items->>'product_id')::integer, NEW.order_id);
+    
+    RETURN NEW;  
+END;  
+$$ LANGUAGE plpgsql;
+
+-- Restore the previous trigger
+CREATE TRIGGER create_pending_reviews_trigger  
+    AFTER INSERT ON order_history  
+    FOR EACH ROW  
+    EXECUTE FUNCTION create_pending_reviews();
+
+-- Revert order_id type changes in related tables  
+ALTER TABLE current_orders  
+ALTER COLUMN order_id TYPE INTEGER;
+
+ALTER TABLE order_history  
+ALTER COLUMN order_id TYPE INTEGER;
+
+ALTER TABLE user_pending_reviews  
+ALTER COLUMN order_id TYPE INTEGER;
