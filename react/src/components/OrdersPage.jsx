@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Link } from "react-router-dom"
 import { Search, Heart } from "lucide-react"
 
-// Updated sample data with more details
+// Sample data for all sections
 const bestsellers = [
   {
     id: 'b1',
@@ -14,14 +14,7 @@ const bestsellers = [
     reviews: 811,
     image: "/public/ChocolateTuffle.png",
     deliveryTime: "3 hours",
-    description: "Delectably Delicious in Every Layers!",
-    weights: ['0.5 kg', '1 kg', '1.5 kg', '2 kg', '3 kg', '4 kg'],
-    addons: [
-      { name: "Basic", price: 595 },
-      { name: "With Orchids", price: 1345 }
-    ]
   },
-  // Add other products with similar structure
   // ... add more bestsellers
   {
     id: 'b2',
@@ -31,12 +24,6 @@ const bestsellers = [
     reviews: 811,
     image: "/public/ChocolateTuffle.png",
     deliveryTime: "3 hours",
-    description: "Delectably Delicious in Every Layers!",
-    weights: ['0.5 kg', '1 kg', '1.5 kg', '2 kg', '3 kg', '4 kg'],
-    addons: [
-      { name: "Basic", price: 595 },
-      { name: "With Orchids", price: 1345 }
-    ]
   },
   {
     id: 'b3',
@@ -46,12 +33,6 @@ const bestsellers = [
     reviews: 811,
     image: "/public/ChocolateTuffle.png",
     deliveryTime: "3 hours",
-    description: "Delectably Delicious in Every Layers!",
-    weights: ['0.5 kg', '1 kg', '1.5 kg', '2 kg', '3 kg', '4 kg'],
-    addons: [
-      { name: "Basic", price: 595 },
-      { name: "With Orchids", price: 1345 }
-    ]
   },
   {
     id: 'b4',
@@ -61,12 +42,6 @@ const bestsellers = [
     reviews: 811,
     image: "/public/ChocolateTuffle.png",
     deliveryTime: "3 hours",
-    description: "Delectably Delicious in Every Layers!",
-    weights: ['0.5 kg', '1 kg', '1.5 kg', '2 kg', '3 kg', '4 kg'],
-    addons: [
-      { name: "Basic", price: 595 },
-      { name: "With Orchids", price: 1345 }
-    ]
   },
 ]
 
@@ -110,47 +85,52 @@ const flowers = [
 ]
 
 // Add this at the top level, after your product arrays
-const getAllProducts = () => [...bestsellers];
+const getAllProducts = () => {
+  return [
+    ...bestsellers.map(item => ({ ...item, category: 'bestsellers' })),
+    ...valentineItems.map(item => ({ ...item, category: 'valentines' })),
+    ...expressItems.map(item => ({ ...item, category: 'express' })),
+    ...flowers.map(item => ({ ...item, category: 'flowers' }))
+  ]
+}
 
+// Component to render product cards
 const ProductCard = ({ item }) => (
   <Link
     to={`/product/${item.id}`}
-    className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow max-w-[160px] mx-auto"
+    className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow max-w-[160px] mx-auto" // Further reduced max-width
   >
     <div className="relative">
       <img 
-        src={item.image} 
+        src={item.image || "/placeholder.svg"} 
         alt={item.name} 
-        className="w-full h-32 object-cover"
+        className="w-full h-20 object-cover" // Further reduced height
       />
       <button className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md">
         <Heart className="w-3 h-3 text-gray-400" />
       </button>
     </div>
-    <div className="p-2">
-      <h3 className="font-medium text-xs mb-1 truncate">{item.name}</h3>
-      <div className="flex items-center gap-1 mb-1">
+    <div className="p-1.5"> {/* Further reduced padding */}
+      <h3 className="font-medium text-xs mb-0.5 truncate">{item.name}</h3>
+      <div className="flex items-center gap-1 mb-0.5">
         <span className="px-1 py-0.5 bg-green-50 text-green-700 text-[10px] rounded">★ {item.rating}</span>
         <span className="text-[10px] text-gray-500">({item.reviews})</span>
       </div>
-      <p className="font-semibold text-xs mb-1">₹{item.price}</p>
+      <p className="font-semibold text-xs mb-0.5">₹ {item.price}</p>
       <p className="text-[10px] text-gray-500">Delivery in {item.deliveryTime}</p>
     </div>
   </Link>
 )
-
-const Section = ({ id, title, items, description }) => (
+// Section component
+const Section = ({ id, title, items }) => (
   <div id={id} className="mb-16">
     <div className="flex justify-between items-center mb-4">
-      <div>
-        <h2 className="text-xl font-semibold">{title}</h2>
-        {description && <p className="text-gray-600 text-sm mt-1">{description}</p>}
-      </div>
+      <h2 className="text-xl font-semibold">{title}</h2>
       <Link to={`/all-${id}`} className="px-3 py-1.5 text-xs text-white bg-teal-700 rounded-md">
         View All
       </Link>
     </div>
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 px-4">
       {items.map((item) => (
         <ProductCard key={item.id} item={item} />
       ))}
@@ -192,13 +172,6 @@ const OrdersPage = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-4">
@@ -245,49 +218,29 @@ const OrdersPage = () => {
       </div>
 
       {/* Category Navigation */}
-      <div className="flex justify-between items-center py-3 space-x-8 border-b mb-8">
-        {['bestsellers','valentines', 'express', 'flowers'].map((category) => (
-          <a
+      <div className="flex justify-between items-center py-3 space-x-8">
+        {['valentines', 'express', 'cakes', 'flowers'].map((category) => (
+          <Link
             key={category}
-            href={`#${category}`}
+            to={`#${category}`}
             onClick={(e) => {
               e.preventDefault();
-              scrollToSection(category);
+              document.getElementById(category)?.scrollIntoView({ behavior: 'smooth' });
             }}
-            className="whitespace-nowrap text-gray-600 hover:text-pink-600 font-medium cursor-pointer"
+            className="whitespace-nowrap text-gray-600 hover:text-pink-600"
           >
             {category.charAt(0).toUpperCase() + category.slice(1)}
-          </a>
+          </Link>
         ))}
       </div>
 
       {/* Sections */}
       <div className="space-y-12">
-        <Section 
-          id="bestsellers" 
-          title="Bestseller Cakes Online" 
-          description="Delectably Delicious in Every Layers!"
-          items={bestsellers} 
-        />
-        <Section 
-          id="valentines" 
-          title="Valentine's Day Special" 
-          description="Delectably Delicious in Every Layers!"
-          items={valentineItems} 
-        />
-        <Section 
-          id="express" 
-          title="Express Delivery" 
-          description="Delectably Delicious in Every Layers!"
-          items={expressItems} 
-        />
-        <Section 
-          id="flowers" 
-          title="Fresh Flowers" 
-          description="Delectably Delicious in Every Layers!"
-          items={flowers} 
-        />
-        {/* Add other sections */}
+        <Section id="bestsellers" title="Bestseller Cakes Online" items={bestsellers} />
+        <Section id="valentines" title="Valentine's Day Special" items={valentineItems} />
+        <Section id="express" title="Express Delivery" items={expressItems} />
+        <Section id="flowers" title="Fresh Flowers" items={flowers} />
+        {/* Add more sections as needed */}
       </div>
     </div>
   )

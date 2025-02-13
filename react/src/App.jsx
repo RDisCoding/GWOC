@@ -6,6 +6,7 @@ import OrdersPage from './components/OrdersPage';
 import ProductPage from './components/ProductPage';
 import HampersPage from './components/HampersPage';
 import CartPage from './components/CartPage';
+import Whatsapp from './components/Whatsapp';
 import { ShoppingCart } from 'lucide-react';
 
 const App = () => {
@@ -27,6 +28,7 @@ const App = () => {
             <Route path="/product/:id" element={<ProductPage addToCart={addToCart} />} />
             <Route path="/hampers" element={<HampersPage addToCart={addToCart} />} />
             <Route path="/cart" element={<CartPage cart={cart} setCart={setCart} />} />
+            <Route path="/whatsapp" element={<Whatsapp />} />
           </Routes>
         </main>
 
