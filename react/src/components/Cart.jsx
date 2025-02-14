@@ -10,6 +10,19 @@ const Cart = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
+
+  useEffect(() => {
+    const status = localStorage.getItem("acceptingOrders") !== "false";
+    setIsAcceptingOrders(status);
+    
+    const handler = () => {
+      setIsAcceptingOrders(localStorage.getItem("acceptingOrders") !== "false");
+    };
+    
+    window.addEventListener("orderAcceptanceChanged", handler);
+    return () => window.removeEventListener("orderAcceptanceChanged", handler);
+  }, []);
 
   useEffect(() => {
     fetchCartData();
@@ -133,6 +146,11 @@ const Cart = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      {!isAcceptingOrders && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          We're currently not accepting orders. Any existing cart items will be saved for later.
+        </div>
+      )}
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cart Items Section */}
         <div className="lg:col-span-2 space-y-4">
@@ -233,20 +251,26 @@ const Cart = () => {
               </div>
               <button 
                 onClick={() => setIsCheckoutOpen(true)}
-                className="w-full py-3 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition-colors"
+                className={`w-full py-3 rounded-md transition-colors ${
+                  isAcceptingOrders
+                    ? "bg-blue-700 text-white hover:bg-blue-800"
+                    : "bg-gray-400 text-gray-700 cursor-not-allowed"
+                }`}
+                disabled={!isAcceptingOrders}
               >
-                PLACE ORDER
+                {isAcceptingOrders ? "PLACE ORDER" : "ORDERS PAUSED"}
               </button>
+
             </div>
           </div>
         </div>
       </div>
       <CheckoutDialog 
-    isOpen={isCheckoutOpen}
-    onClose={() => setIsCheckoutOpen(false)}
-    cart={cart}
-    onPaymentComplete={handlePaymentComplete}
-  />
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        cart={cart}
+        onPaymentComplete={handlePaymentComplete}
+      />
     </div>
     
   );

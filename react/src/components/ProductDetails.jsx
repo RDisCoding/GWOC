@@ -9,8 +9,8 @@ const ProductDetails = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedWeight, setSelectedWeight] = useState('0.5');
-  const [selectedVariant, setSelectedVariant] = useState('basic');
+  const [selectedWeight, setSelectedWeight] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
   const [nameOnCake, setNameOnCake] = useState('');
 
   useEffect(() => {
@@ -20,14 +20,15 @@ const ProductDetails = () => {
   const fetchProductDetails = async () => {
     try {
       const response = await fetch(`http://localhost:5000/products/${id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch product details');
-      }
+      if (!response.ok) throw new Error('Failed to fetch product details');
       const parseRes = await response.json();
       
-      // Set initial selected weight to first available weight
-      if (parseRes.available_weights && parseRes.available_weights.length > 0) {
+      // Initialize selected weight and variant
+      if (parseRes.available_weights?.length > 0) {
         setSelectedWeight(parseRes.available_weights[0].value);
+      }
+      if (parseRes.variants?.length > 0) {
+        setSelectedVariant(parseRes.variants[0].id);
       }
       
       setProduct(parseRes);
@@ -37,7 +38,7 @@ const ProductDetails = () => {
       setLoading(false);
     }
   };
-
+  
   const addToCart = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -126,6 +127,9 @@ const ProductDetails = () => {
     { id: 'basic', name: 'Basic', price: product.price },
     { id: 'orchids', name: 'With Orchids', price: product.price + 750 }
   ];
+  const price = variants.length > 0 
+    ? variants.find(v => v.id === selectedVariant)?.price 
+    : product.price;
 
   return (
     <div className="max-w-7xl mx-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -164,7 +168,8 @@ const ProductDetails = () => {
           </div>
           
           <div>
-            <h3 className="font-medium mb-2">Make this gift extra special</h3>
+          <h3 className="font-medium mb-2">Make this gift extra special</h3>
+          {variants.length > 0 ? (
             <div className="grid grid-cols-2 gap-4">
               {variants.map((variant) => (
                 <div 
@@ -181,15 +186,20 @@ const ProductDetails = () => {
                   />
                   <div className="text-sm">{variant.name}</div>
                   <div className="font-semibold">₹ {variant.price}</div>
-                </div>
+                  </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <div className="text-gray-500">Not Available</div>
+          )}
+        </div>
 
-          <div>
+          {/* Weight Section */}
+        <div>
           <h3 className="font-medium mb-2">Weight</h3>
-          <div className="flex flex-wrap gap-2">
-            {product.available_weights?.map((weight) => (
+          {product.available_weights?.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {product.available_weights.map((weight) => (
               <button
                 key={weight.value}
                 className={`px-4 py-2 rounded border ${
@@ -203,6 +213,9 @@ const ProductDetails = () => {
               </button>
             ))}
           </div>
+          ) : (
+            <div className="text-gray-500">Not Available</div>
+          )}
         </div>
 
           <div className="space-y-2">
@@ -244,13 +257,17 @@ const ProductDetails = () => {
           <div className="pt-4 flex gap-4">
           <button 
             onClick={addToCart}
-            className="flex-1 px-6 py-3 border border-blue-500 text-blue-500 rounded-lg font-medium">
+            disabled={!selectedVariant}
+            className="flex-1 px-6 py-3 border border-blue-500 text-blue-500 rounded-lg font-medium disabled:opacity-50"
+          >
             ADD TO CART
           </button>
           <button 
             onClick={handleBuyNow}
-            className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg font-medium">
-            BUY NOW | ₹ {variants.find(v => v.id === selectedVariant)?.price}
+            disabled={!selectedVariant}
+            className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg font-medium disabled:opacity-50"
+          >
+            BUY NOW | ₹ {price || 'N/A'}
           </button>
         </div>
         </div>

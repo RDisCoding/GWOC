@@ -1,211 +1,108 @@
-// components/ReviewDialog.jsx
-import React, { useState, useEffect } from 'react';
-import { Star } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from './ui/Dialog';
+import { useState } from "react";
 
-const ReviewDialog = ({ isOpen, onClose }) => {
-  const [pendingReviews, setPendingReviews] = useState([]);
-  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+const ReviewDialog = ({ review, userId, onClose, onSubmitSuccess }) => {
   const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchPendingReviews();
-    }
-  }, [isOpen]);
-
-  const fetchPendingReviews = async () => {
+  const handleSkip = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        onClose();
-        return [];
-      }
-  
-      const response = await fetch('http://localhost:5000/api/reviews/pending', {
+      await fetch("http://localhost:5000/api/reviews/mark-shown", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.token}`
+        },
+        body: JSON.stringify({ reviewId: review.id })
       });
-  
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        window.location.reload();
-        return [];
-      }
-  
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-  
-      const data = await response.json();
-      setPendingReviews(data);
-      return data;
-    } catch (error) {
-      console.error('Error fetching pending reviews:', error);
       onClose();
-      return [];
+    } catch (error) {
+      console.error("Error marking review as shown:", error);
     }
   };
 
-  const handleSubmitReview = async () => {
-    if (!rating) return;
+  const handleSubmit = async () => {
+    if (rating === 0) {
+      alert("Please select a rating!");
+      return;
+    }
     
-    const currentReview = pendingReviews[currentReviewIndex];
     setIsSubmitting(true);
-    
     try {
-      const response = await fetch('http://localhost:5000/api/reviews', {
-        method: 'POST',
+      // Submit review AND mark as shown in single request
+      const response = await fetch("http://localhost:5000/api/reviews/submit", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.token}`
         },
         body: JSON.stringify({
-          product_id: currentReview.product_id,
-          order_id: currentReview.order_id,
+          userId,
+          productId: review.product_id,
+          orderId: review.order_id,
           rating,
-          comment
+          comment,
+          reviewId: review.id // Add review ID to request
         })
-        
       });
-
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        window.location.reload();
-        return;
-      }
   
-      // Check for server errors
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit review');
-      }
+      if (!response.ok) throw new Error("Failed to submit review");
   
-      // Refresh pending reviews list
-      const updatedReviews = await fetchPendingReviews();
-      
-      if (updatedReviews.length > 0) {
-        setCurrentReviewIndex(0);  // Reset to first item with new data
-        setRating(0);
-        setComment('');
-      } else {
-        onClose();  // Close dialog if no more reviews
-      }
+      onSubmitSuccess();
+      onClose();
     } catch (error) {
-      console.error('Error submitting review:', error.message);
-      alert('Failed to submit review. Please try again.');
+      console.error("Error submitting review:", error);
+      alert("Failed to submit review. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSkip = async () => {
-    const currentReview = pendingReviews[currentReviewIndex];
-    
-    try {
-      const response = await fetch(`http://localhost:5000/api/reviews/skip`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          product_id: currentReview.product_id,
-          order_id: currentReview.order_id
-        })
-      });
-  
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        window.location.reload();
-        return;
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to skip review');
-      }
-  
-      // Refresh pending reviews list
-      const updatedReviews = await fetchPendingReviews();
-      
-      if (updatedReviews.length > 0) {
-        setCurrentReviewIndex(0);
-        setRating(0);
-        setComment('');
-      } else {
-        onClose();
-      }
-    } catch (error) {
-      console.error('Error skipping review:', error.message);
-      alert('Failed to skip review. Please try again.');
-    }
-  };
-
-  if (!pendingReviews.length) return null;
-
-  const currentReview = pendingReviews[currentReviewIndex];
+  if (!review) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Review Your Purchase</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          <div className="text-center">
-            <h3 className="font-medium text-lg">{currentReview?.product_name}</h3>
-            <p className="text-sm text-gray-600">How would you rate this product?</p>
-          </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-[90%] max-w-md">
+        <h2 className="text-lg font-semibold text-gray-800 mb-2">Rate Your Purchase</h2>
+        <p className="text-gray-600 mb-4">How was your experience with <b>{review.product_name}</b>?</p>
 
-          <div className="flex justify-center gap-2">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                onClick={() => setRating(star)}
-                className="text-2xl focus:outline-none"
-              >
-                <Star
-                  className={`w-8 h-8 ${
-                    rating >= star ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
-
-          <textarea
-            placeholder="Share your thoughts about this product (optional)"
-            className="w-full p-3 border rounded-md"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={3}
-          />
+        <div className="flex justify-center mb-3">
+          {[1, 2, 3, 4, 5].map((num) => (
+            <button
+              key={num}
+              onClick={() => setRating(num)}
+              className={`mx-1 text-2xl ${num <= rating ? "text-yellow-500" : "text-gray-300"}`}
+            >
+              ★
+            </button>
+          ))}
         </div>
 
-        <DialogFooter>
-          <div className="flex w-full gap-3">
-            <Button
-              onClick={handleSkip}
-              className="bg-gray-200 text-gray-800 hover:bg-gray-300"
-            >
-              Maybe Later
-            </Button>
-            <Button
-              onClick={handleSubmitReview}
-              disabled={!rating || isSubmitting}
-              className="flex-1"
-            >
-              Submit Review
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <textarea
+          className="w-full p-2 border rounded-md mb-3"
+          rows="3"
+          placeholder="Write a review (optional)..."
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+        />
+
+        <div className="flex justify-between">
+          <button 
+            onClick={handleSkip}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            Maybe Later
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Submitting..." : "Submit"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

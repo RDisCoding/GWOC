@@ -76,4 +76,61 @@ router.get("/is-verify", authorization, async(req, res) => {
     }
 });
 
+// Admin login route
+router.post("/admin/login", async(req, res) => {
+    try {
+        const {email, password} = req.body;
+        
+        // Check if admin exists
+        const admin = await pool.query(
+            "SELECT * FROM admins WHERE admin_email = $1",
+            [email]
+        );
+
+        if (admin.rows.length === 0) {
+            return res.status(401).json({ message: "Invalid credentials" });
+        }
+
+        // Check password
+        const validPassword = await bcrypt.compare(password, admin.rows[0].admin_password);
+
+        if (!validPassword) {
+            return res.status(401).json({ message: "Invalid credentials" });
+        }
+
+        // If everything is correct, send admin info
+        res.json({
+            admin_id: admin.rows[0].admin_id,
+            admin_name: admin.rows[0].admin_name,
+            isAdmin: true
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: "Server Error" });
+    }
+});
+
+// Verify admin token
+router.get("/admin/verify", async(req, res) => {
+    try {
+        const token = req.header("token");
+        
+        if(!token) {
+            return res.status(403).json("Not Authorized");
+        }
+
+        const verified = jwt.verify(token, process.env.jwtSecret);
+        
+        if(!verified.admin) {
+            return res.status(403).json("Not an admin");
+        }
+
+        res.json(true);
+    } catch (err) {
+        console.error(err.message);
+        res.status(403).json("Not Authorized");
+    }
+});
+
 module.exports = router;

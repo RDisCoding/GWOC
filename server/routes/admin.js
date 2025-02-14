@@ -27,41 +27,82 @@ router.put("/current-orders/:orderId/pickup", async (req, res) => {
   try {
     await client.query('BEGIN');
     
-    // Use a single query to handle everything
-    const result = await client.query(`
-      WITH moved_order AS (
-        DELETE FROM current_orders 
-        WHERE order_id = $1
-        RETURNING *
-      )
-      INSERT INTO order_history 
-        (order_id, user_id, items, total, picked_up_at)
-      SELECT 
-        order_id,
-        user_id,
-        items,
-        total,
-        NOW()
-      FROM moved_order
-      RETURNING *;
-    `, [orderId]);
+    // First, fetch the current order to ensure it exists and get its details
+    const currentOrder = await client.query(
+      'SELECT * FROM current_orders WHERE order_id = $1',
+      [orderId]
+    );
 
-    if (result.rows.length === 0) {
+    if (currentOrder.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: "Order not found" });
     }
 
+    const orderData = currentOrder.rows[0];
+
+    // Ensure items is a properly formatted JSONB array
+    let itemsArray;
+    try {
+      // If items is a string, parse it
+      itemsArray = typeof orderData.items === 'string' 
+        ? JSON.parse(orderData.items) 
+        : orderData.items;
+      
+      // If items is not an array, wrap it in an array
+      if (!Array.isArray(itemsArray)) {
+        itemsArray = [itemsArray];
+      }
+      
+      // Ensure each item has a product_id
+      itemsArray = itemsArray.map(item => {
+        if (!item.product_id) {
+          throw new Error('Missing product_id in item');
+        }
+        return item;
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: "Invalid items format", 
+        details: error.message 
+      });
+    }
+
+    // Move the order to history with properly formatted items
+    const historyResult = await client.query(`
+      INSERT INTO order_history 
+        (order_id, user_id, items, total, picked_up_at, created_at)
+      VALUES 
+        ($1, $2, $3::jsonb, $4, NOW(), $5)
+      RETURNING *
+    `, [
+      orderData.order_id,
+      orderData.user_id,
+      JSON.stringify(itemsArray),
+      orderData.total,
+      orderData.created_at
+    ]);
+
+    // Delete from current orders
+    await client.query(
+      'DELETE FROM current_orders WHERE order_id = $1',
+      [orderId]
+    );
+
     await client.query('COMMIT');
     
     res.json({ 
-      message: "Order moved successfully",
-      order: result.rows[0]
+      message: "Order moved to history successfully",
+      order: historyResult.rows[0]
     });
     
   } catch (error) {
     await client.query('ROLLBACK');
     console.error("Error moving order:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ 
+      error: "Internal Server Error",
+      details: error.message 
+    });
   } finally {
     client.release();
   }

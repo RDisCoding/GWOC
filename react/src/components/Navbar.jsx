@@ -84,7 +84,7 @@
 
 // export default Navbar;
 
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Package, 
@@ -95,8 +95,27 @@ import {
 } from 'lucide-react';
 
 const Navbar = ({ isAuthenticated, setAuth, userName }) => {
+    const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
+  
+    useEffect(() => {
+      const status = localStorage.getItem("acceptingOrders") !== "false";
+      setIsAcceptingOrders(status);
+      
+      const handler = () => {
+        setIsAcceptingOrders(localStorage.getItem("acceptingOrders") !== "false");
+      };
+      
+      window.addEventListener("orderAcceptanceChanged", handler);
+      return () => window.removeEventListener("orderAcceptanceChanged", handler);
+    }, []);
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+      {!isAcceptingOrders && (
+        <div className="bg-red-500 text-white text-center py-2">
+          We're currently not accepting orders. Please check back later.
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}

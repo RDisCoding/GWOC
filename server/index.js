@@ -17,7 +17,7 @@ app.use("/orders", require("./routes/orders"));
 app.use("/products", require("./routes/products"));
 app.use("/cart", require("./routes/cart"));
 app.use('/admin', require('./routes/admin'));
-app.use('/api', require('./routes/review-routes'));
+app.use("/api/reviews", require("./routes/reviews"));
 
 
 app.listen(5000, () => {

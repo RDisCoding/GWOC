@@ -312,3 +312,92 @@ ALTER COLUMN order_id TYPE INTEGER;
 
 ALTER TABLE user_pending_reviews  
 ALTER COLUMN order_id TYPE INTEGER;
+
+-- First, let's fix the trigger function to properly handle the JSONB array
+CREATE OR REPLACE FUNCTION create_pending_reviews()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Insert pending reviews for each product in the items array
+    INSERT INTO user_pending_reviews (user_id, product_id, order_id)
+    SELECT 
+        NEW.user_id,
+        (elem->>'product_id')::integer,
+        NEW.order_id
+    FROM jsonb_array_elements(NEW.items) AS elem
+    WHERE (elem->>'product_id') IS NOT NULL;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Drop existing trigger and recreate it
+DROP TRIGGER IF EXISTS create_pending_reviews_trigger ON order_history;
+
+CREATE TRIGGER create_pending_reviews_trigger
+    AFTER INSERT ON order_history
+    FOR EACH ROW
+    EXECUTE FUNCTION create_pending_reviews();
+
+
+
+ALTER TABLE user_pending_reviews 
+ADD COLUMN IF NOT EXISTS dialog_shown BOOLEAN DEFAULT false;
+
+CREATE OR REPLACE FUNCTION update_review_prompt_on_pickup()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update pending reviews when an order is picked up
+    UPDATE user_pending_reviews
+    SET review_status = 'pending', last_prompted_at = NULL, dialog_shown = false
+    WHERE order_id = NEW.order_id 
+    AND review_status = 'pending';
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to activate the function when an order is picked up
+CREATE TRIGGER trigger_review_prompt_on_pickup
+AFTER UPDATE OF pickup_status ON current_orders
+FOR EACH ROW
+WHEN (NEW.pickup_status = 'picked_up')
+EXECUTE FUNCTION update_review_prompt_on_pickup();
+
+ALTER TABLE reviews 
+ADD COLUMN IF NOT EXISTS display_on_homepage BOOLEAN DEFAULT false;
+
+CREATE OR REPLACE FUNCTION mark_review_completed()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE user_pending_reviews
+    SET review_status = 'completed'
+    WHERE user_id = NEW.user_id AND product_id = NEW.product_id;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_mark_review_completed
+AFTER INSERT ON reviews
+FOR EACH ROW
+EXECUTE FUNCTION mark_review_completed();
+
+CREATE OR REPLACE FUNCTION mark_review_as_later()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE user_pending_reviews
+    SET last_prompted_at = CURRENT_TIMESTAMP, dialog_shown = true
+    WHERE user_id = NEW.user_id AND product_id = NEW.product_id;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TABLE admins (
+    admin_id SERIAL PRIMARY KEY,
+    admin_name VARCHAR(255) NOT NULL,
+    admin_email VARCHAR(255) NOT NULL UNIQUE,
+    admin_password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
