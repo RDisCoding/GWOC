@@ -1,17 +1,28 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
-// Sample data - in a real app, this would come from an API
-const cakeDetails = {
-  id: 1,
-  name: 'Chocolate Truffle',
-  price: 29.99,
-  description: 'Rich chocolate cake with truffle frosting',
-  longDescription: 'Our signature chocolate truffle cake is made with the finest Belgian chocolate and fresh cream. Perfect for special occasions.',
-  image: '/api/placeholder/600/400',
-  sizes: ['6 inch', '8 inch', '10 inch'],
-  flavors: ['Classic Chocolate', 'Dark Chocolate', 'White Chocolate'],
-};
+const cakesData = [
+  {
+    id: 'b1',
+    name: 'Chocolate Truffle',
+    price: 29.99,
+    description: 'Rich chocolate cake with truffle frosting',
+    longDescription: 'Our signature chocolate truffle cake is made with the finest Belgian chocolate and fresh cream. Perfect for special occasions.',
+    image: '/public/ChocolateTuffle.png',
+    sizes: ['6 inch', '8 inch', '10 inch'],
+    flavors: ['Classic Chocolate', 'Dark Chocolate', 'White Chocolate'],
+  },
+  {
+    id: 'b2',
+    name: 'Chocolate Truffle',
+    price: 29.99,
+    description: 'Rich chocolate cake with truffle frosting',
+    longDescription: 'Our signature chocolate truffle cake is made with the finest Belgian chocolate and fresh cream. Perfect for special occasions.',
+    image: '/api/placeholder/600/400',
+    sizes: ['6 inch', '8 inch', '10 inch'],
+    flavors: ['Classic Chocolate', 'Dark Chocolate', 'White Chocolate'],
+  }
+];
 
 const similarCakes = [
   {
@@ -25,6 +36,12 @@ const similarCakes = [
 
 const ProductPage = ({ addToCart }) => {
   const { id } = useParams();
+  const cakeDetails = cakesData.find(cake => cake.id === id);
+  
+  if (!cakeDetails) {
+    return <div>Product not found</div>;
+  }
+
   const [selectedSize, setSelectedSize] = useState(cakeDetails.sizes[0]);
   const [selectedFlavor, setSelectedFlavor] = useState(cakeDetails.flavors[0]);
 
