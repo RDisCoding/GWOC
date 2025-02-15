@@ -401,3 +401,121 @@ CREATE TABLE admins (
     admin_password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+
+-- Create hampers table
+CREATE TABLE hampers (Q
+    hamper_id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    image_url VARCHAR(500),
+    is_bestseller BOOLEAN DEFAULT false,
+    rating DECIMAL(2,1),
+    review_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT true,
+    contents JSONB NOT NULL, -- Store items included in the hamper
+    packaging_type VARCHAR(50), -- e.g., 'Box', 'Basket', 'Luxury Box'
+    occasion VARCHAR(50), -- e.g., 'Festival', 'Birthday', 'Anniversary'
+    delivery_time VARCHAR(50) DEFAULT '2-3 days'
+);
+
+
+-- Add a hamper_id column to cart_items table
+ALTER TABLE cart_items 
+ADD COLUMN hamper_id INTEGER REFERENCES hampers(hamper_id),
+ALTER COLUMN product_id DROP NOT NULL;
+
+-- Add a check constraint to ensure either product_id or hamper_id is provided
+ALTER TABLE cart_items
+ADD CONSTRAINT cart_item_type_check 
+CHECK (
+    (product_id IS NOT NULL AND hamper_id IS NULL) OR 
+    (product_id IS NULL AND hamper_id IS NOT NULL)
+);
+
+
+-- Add a type column to hampers table to distinguish between pre-made and custom hampers
+ALTER TABLE hampers 
+ADD COLUMN IF NOT EXISTS hamper_type VARCHAR(20) 
+CHECK (hamper_type IN ('pre-made', 'custom'));
+
+-- Add a table to store custom hamper items
+CREATE TABLE custom_hamper_items (
+    id SERIAL PRIMARY KEY,
+    hamper_id INTEGER REFERENCES hampers(hamper_id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(product_id),
+    quantity INTEGER DEFAULT 1,
+    price_at_time DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add an API endpoint to create custom hampers
+CREATE OR REPLACE FUNCTION create_custom_hamper(
+    p_name VARCHAR(200),
+    p_total_price DECIMAL(10,2),
+    p_items JSONB
+) RETURNS INTEGER AS $$
+DECLARE
+    v_hamper_id INTEGER;
+BEGIN
+    -- Insert the main hamper record
+    INSERT INTO hampers (
+        name,
+        price,
+        hamper_type,
+        contents,
+        created_at
+    ) VALUES (
+        p_name,
+        p_total_price,
+        'custom',
+        p_items,
+        CURRENT_TIMESTAMP
+    ) RETURNING hamper_id INTO v_hamper_id;
+
+    -- Insert individual items
+    INSERT INTO custom_hamper_items (
+        hamper_id,
+        product_id,
+        price_at_time
+    )
+    SELECT 
+        v_hamper_id,
+        (item->>'id')::INTEGER,
+        (item->>'price')::DECIMAL(10,2)
+    FROM jsonb_array_elements(p_items) AS item;
+
+    RETURN v_hamper_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Modify the cart_items table to handle custom hamper IDs as text
+ALTER TABLE cart_items 
+ADD COLUMN custom_hamper_id TEXT,
+ALTER COLUMN hamper_id DROP NOT NULL;
+
+-- Update the constraint to include custom_hamper_id
+ALTER TABLE cart_items DROP CONSTRAINT IF EXISTS cart_item_type_check;
+ALTER TABLE cart_items
+ADD CONSTRAINT cart_item_type_check 
+CHECK (
+    (product_id IS NOT NULL AND hamper_id IS NULL AND custom_hamper_id IS NULL) OR 
+    (product_id IS NULL AND hamper_id IS NOT NULL AND custom_hamper_id IS NULL) OR
+    (product_id IS NULL AND hamper_id IS NULL AND custom_hamper_id IS NOT NULL)
+);
+
+-- Add new columns to cart_items table for custom hampers
+ALTER TABLE cart_items 
+ADD COLUMN IF NOT EXISTS is_custom BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS custom_items JSONB;
+
+-- Update the constraint
+ALTER TABLE cart_items DROP CONSTRAINT IF EXISTS cart_item_type_check;
+ALTER TABLE cart_items
+ADD CONSTRAINT cart_item_type_check 
+CHECK (
+    (product_id IS NOT NULL AND hamper_id IS NULL) OR 
+    (product_id IS NULL AND hamper_id IS NOT NULL)
+);
