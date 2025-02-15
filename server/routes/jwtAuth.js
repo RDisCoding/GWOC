@@ -3,6 +3,9 @@ const pool = require('../db');
 const bcrypt = require('bcrypt');
 const jwtGenerator = require('../utils/jwtGenerator');
 const authorization = require('../middleware/authorization')
+const jwt = require('jsonwebtoken');
+// const token = req.header("token"); // or from Authorization
+// const verified = jwt.verify(token, process.env.jwtSecret);
 
 // registering
 router.post("/register", async(req, res) => {
