@@ -41,7 +41,6 @@ const DialogFooter = ({ children }) => (
   </div>
 );
 
-// Button Component (unchanged)
 const Button = ({ children, className = "", ...props }) => (
   <button
     className={`px-4 py-2 rounded-md font-medium transition-colors
@@ -53,11 +52,10 @@ const Button = ({ children, className = "", ...props }) => (
   </button>
 );
 
-const CheckoutDialog = ({ isOpen, onClose, cart, onPaymentComplete }) => {
+const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) => {
   const [paymentStatus, setPaymentStatus] = useState('pending');
   const [localCart, setLocalCart] = useState(null);
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
   const [formErrors, setFormErrors] = useState({});
 
   const handlePayment = async () => {
@@ -76,16 +74,21 @@ const CheckoutDialog = ({ isOpen, onClose, cart, onPaymentComplete }) => {
       setPaymentStatus('processing');
       setLocalCart(cart);
   
+      // Prepare the checkout data including both cart items and hampers
+      const checkoutData = {
+        total: cart.total,
+        phone: phone,
+        cart_items: cart.items,
+        hampers: hampers // Include hampers data in the checkout request
+      };
+
       const response = await fetch('http://localhost:5000/cart/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'token': localStorage.getItem('token')
         },
-        body: JSON.stringify({
-          total: cart.total,
-          phone: phone,
-        })
+        body: JSON.stringify(checkoutData)
       });
   
       if (!response.ok) throw new Error('Checkout failed');
@@ -104,6 +107,13 @@ const CheckoutDialog = ({ isOpen, onClose, cart, onPaymentComplete }) => {
     }
   };
 
+  // Calculate total including both cart items and hampers
+  const calculateTotal = () => {
+    const cartTotal = cart.total || 0;
+    const hampersTotal = hampers?.reduce((sum, hamper) => sum + (hamper.price * hamper.quantity), 0) || 0;
+    return cartTotal + hampersTotal;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -115,26 +125,24 @@ const CheckoutDialog = ({ isOpen, onClose, cart, onPaymentComplete }) => {
         
         {paymentStatus === 'pending' && (
           <div className="space-y-4">
-            {/* Add contact information form */}
-  <div className="space-y-3">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Contact Phone
-      </label>
-      <input
-        type="tel"
-        required
-        className="w-full px-3 py-2 border rounded-md"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-      />
-      {formErrors.phone && (
-        <p className="text-red-500 text-sm">{formErrors.phone}</p>
-      )}
-    </div>
-    
-    
-  </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Contact Phone
+                </label>
+                <input
+                  type="tel"
+                  required
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+                {formErrors.phone && (
+                  <p className="text-red-500 text-sm">{formErrors.phone}</p>
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-center">
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
@@ -145,15 +153,25 @@ const CheckoutDialog = ({ isOpen, onClose, cart, onPaymentComplete }) => {
             
             <div className="border rounded-lg p-4 space-y-2">
               <h3 className="font-medium">Order Summary</h3>
-              {cart.items.map(item => (
+              {/* Regular cart items */}
+              {cart.items?.map(item => (
                 <div key={item.cart_item_id} className="flex justify-between text-sm">
                   <span>{item.name} x {item.quantity}</span>
                   <span>₹ {item.price_at_time * item.quantity}</span>
                 </div>
               ))}
+              
+              {/* Hampers items */}
+              {hampers?.map(hamper => (
+                <div key={hamper.hamper_id} className="flex justify-between text-sm">
+                  <span>{hamper.name} (Hamper) x {hamper.quantity}</span>
+                  <span>₹ {hamper.price * hamper.quantity}</span>
+                </div>
+              ))}
+              
               <div className="border-t pt-2 font-medium flex justify-between">
                 <span>Total Amount</span>
-                <span>₹ {cart.total}</span>
+                <span>₹ {calculateTotal()}</span>
               </div>
             </div>
           </div>
@@ -166,28 +184,38 @@ const CheckoutDialog = ({ isOpen, onClose, cart, onPaymentComplete }) => {
         )}
         
         {paymentStatus === 'completed' && (
-        <div className="space-y-4">
-          <div className="text-center text-green-600">
-            <p>Your order has been placed successfully!</p>
-            <p className="text-sm text-gray-600 mt-2">
-              Order ID: #{localCart?.order_id || 'N/A'}
-            </p>
-            <p className="text-sm mt-2">
-              We'll contact you at {phone} for delivery updates
-            </p>
-          </div>
+          <div className="space-y-4">
+            <div className="text-center text-green-600">
+              <p>Your order has been placed successfully!</p>
+              <p className="text-sm text-gray-600 mt-2">
+                Order ID: #{localCart?.order_id || 'N/A'}
+              </p>
+              <p className="text-sm mt-2">
+                We'll contact you at {phone} for delivery updates
+              </p>
+            </div>
             
             <div className="border rounded-lg p-4 space-y-2">
               <h3 className="font-medium">Invoice</h3>
-              {localCart?.items.map(item => (
+              {/* Regular cart items in invoice */}
+              {localCart?.items?.map(item => (
                 <div key={item.cart_item_id} className="flex justify-between text-sm">
                   <span>{item.name} x {item.quantity}</span>
                   <span>₹ {item.price_at_time * item.quantity}</span>
                 </div>
               ))}
+              
+              {/* Hampers in invoice */}
+              {hampers?.map(hamper => (
+                <div key={hamper.hamper_id} className="flex justify-between text-sm">
+                  <span>{hamper.name} (Hamper) x {hamper.quantity}</span>
+                  <span>₹ {hamper.price * hamper.quantity}</span>
+                </div>
+              ))}
+              
               <div className="border-t pt-2 font-medium flex justify-between">
                 <span>Total Paid</span>
-                <span>₹ {localCart?.total}</span>
+                <span>₹ {calculateTotal()}</span>
               </div>
             </div>
           </div>
@@ -198,9 +226,9 @@ const CheckoutDialog = ({ isOpen, onClose, cart, onPaymentComplete }) => {
             <Button 
               onClick={handlePayment}
               className="w-full"
-              disabled={cart.items.length === 0 || cart.total <= 0}
+              disabled={(!cart.items?.length && !hampers?.length) || calculateTotal() <= 0}
             >
-              Pay ₹ {cart.total}
+              Pay ₹ {calculateTotal()}
             </Button>
           )}
           {paymentStatus === 'completed' && (

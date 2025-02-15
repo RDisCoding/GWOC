@@ -9,6 +9,7 @@ import Dashboard from "./components/Dashboard";
 import Navbar from "./components/Navbar";
 import Orders from "./components/Orders";
 import Hampers from "./components/Hampers";
+import HamperDetails from "./components/HamperDetails";
 import Cart from "./components/Cart";
 import Home from "./components/Home";
 import ProductDetails from "./components/ProductDetails";
@@ -178,6 +179,7 @@ const MainLayout = ({
                         <Route path="/cart" element={<Cart />} />
                         <Route path="/product/:id" element={<ProductDetails />} />
                         <Route path="/category/:categoryName" element={<ViewAllProducts />} />
+                        <Route path="/hampers/:id" element={<HamperDetails />} />
                         <Route 
                             path="/admin/login" 
                             element={

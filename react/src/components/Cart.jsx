@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import CheckoutDialog from './CheckoutDialog';
 
 const Cart = () => {
-  const [cart, setCart] = useState({ items: [], total: 0 });
+  const [cartData, setCartData] = useState({ items: [], total: 0 });
   const [addOns, setAddOns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,7 +46,22 @@ const Cart = () => {
       }
 
       const data = await response.json();
-      setCart(data);
+      
+      // Handle both array and object responses
+      if (Array.isArray(data)) {
+        // If server returns array, calculate total here
+        const total = data.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0);
+        setCartData({
+          items: data,
+          total: total
+        });
+      } else {
+        // If server returns object with items and total
+        setCartData({
+          items: data.items || [],
+          total: data.total || 0
+        });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -64,7 +79,7 @@ const Cart = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setAddOns(data);
+        setAddOns(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error('Failed to fetch add-ons:', err);
@@ -85,7 +100,7 @@ const Cart = () => {
       });
 
       if (response.ok) {
-        fetchCartData(); // Refresh cart data
+        fetchCartData();
       }
     } catch (err) {
       console.error('Failed to update quantity:', err);
@@ -102,7 +117,7 @@ const Cart = () => {
       });
 
       if (response.ok) {
-        fetchCartData(); // Refresh cart data
+        fetchCartData();
       }
     } catch (err) {
       console.error('Failed to remove item:', err);
@@ -125,7 +140,7 @@ const Cart = () => {
       });
 
       if (response.ok) {
-        fetchCartData(); // Refresh cart data
+        fetchCartData();
       }
     } catch (err) {
       console.error('Failed to add item:', err);
@@ -133,15 +148,25 @@ const Cart = () => {
   };
   
   const handlePaymentComplete = () => {
-    fetchCartData(); // Refresh cart data (which should now be empty)
+    fetchCartData();
   };
 
+  // Show loading state
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
   }
 
+  // Show error state
   if (error) {
-    return <div className="min-h-screen bg-gray-50 p-4 text-red-600">Error: {error}</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+        <div className="text-red-600">Error: {error}</div>
+      </div>
+    );
   }
 
   return (
@@ -157,11 +182,11 @@ const Cart = () => {
           <div className="bg-white rounded-lg shadow-sm p-4">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Your Cart</h2>
             
-            {cart.items.length === 0 ? (
+            {cartData.items.length === 0 ? (
               <div className="text-center py-8 text-gray-500">Your cart is empty</div>
             ) : (
-              cart.items.map(item => (
-                <div key={item.cart_item_id} className="flex items-start gap-4 py-4 border-t">
+              cartData.items.map(item => (
+                <div key={item.id} className="flex items-start gap-4 py-4 border-t">
                   <img 
                     src={item.image_url || "/api/placeholder/80/80"}
                     alt={item.name}
@@ -176,24 +201,24 @@ const Cart = () => {
                         )}
                       </div>
                       <button 
-                        onClick={() => removeItem(item.cart_item_id)}
+                        onClick={() => removeItem(item.id)}
                         className="text-gray-400 hover:text-gray-600"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
-                      <p className="font-medium">₹ {item.price_at_time}</p>
+                      <p className="font-medium">₹ {(item.price_at_time * item.quantity).toFixed(2)}</p>
                       <div className="flex items-center gap-2">
                         <button 
-                          onClick={() => updateQuantity(item.cart_item_id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           className="w-8 h-8 flex items-center justify-center border rounded-md"
                         >
                           -
                         </button>
                         <span className="w-8 text-center">{item.quantity}</span>
                         <button 
-                          onClick={() => updateQuantity(item.cart_item_id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
                           className="w-8 h-8 flex items-center justify-center border rounded-md"
                         >
                           +
@@ -205,7 +230,6 @@ const Cart = () => {
               ))
             )}
           </div>
-
           {/* Add-ons Section */}
           <div className="bg-white rounded-lg shadow-sm p-4">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Your last minute add-ons</h2>
@@ -237,30 +261,29 @@ const Cart = () => {
             <div className="border-b pb-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Bill Summary</h2>
-                <span className="text-gray-600">{cart.items.length} Items</span>
+                <span className="text-gray-600">{cartData.items.length} Items</span>
               </div>
             </div>
             <div className="pt-4 space-y-4">
               <div className="flex justify-between">
                 <span className="text-gray-600">Item Total</span>
-                <span className="font-medium">₹ {cart.total}</span>
+                <span className="font-medium">₹ {cartData.total.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-semibold text-lg">
                 <span>Grand Total</span>
-                <span>₹ {cart.total}</span>
+                <span>₹ {cartData.total.toFixed(2)}</span>
               </div>
               <button 
                 onClick={() => setIsCheckoutOpen(true)}
                 className={`w-full py-3 rounded-md transition-colors ${
-                  isAcceptingOrders
+                  isAcceptingOrders && cartData.items.length > 0
                     ? "bg-blue-700 text-white hover:bg-blue-800"
                     : "bg-gray-400 text-gray-700 cursor-not-allowed"
                 }`}
-                disabled={!isAcceptingOrders}
+                disabled={!isAcceptingOrders || cartData.items.length === 0}
               >
                 {isAcceptingOrders ? "PLACE ORDER" : "ORDERS PAUSED"}
               </button>
-
             </div>
           </div>
         </div>
@@ -268,12 +291,10 @@ const Cart = () => {
       <CheckoutDialog 
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
-        cart={cart}
+        cart={cartData}
         onPaymentComplete={handlePaymentComplete}
       />
     </div>
-    
   );
 };
-
 export default Cart;
