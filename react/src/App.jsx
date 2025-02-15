@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
+// import { ShoppingCart } from 'lucide-react';
 
 //components
 import Login from './components/Login';
