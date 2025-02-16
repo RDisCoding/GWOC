@@ -142,7 +142,7 @@ const Orders = () => {
   const fetchCategories = async () => {
     try {
       const response = await fetch("http://localhost:5000/orders/");
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch categories');
       }
@@ -157,35 +157,33 @@ const Orders = () => {
   };
 
   const ProductCard = ({ product }) => (
-    <div 
-      className="bg-white rounded-lg shadow-md overflow-hidden group relative cursor-pointer"
+    <div
+      className="bg-white rounded-lg shadow-md overflow-hidden group relative cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
       onClick={() => window.open(`/product/${product.id}`, '_blank')}
     >
-      <div className="relative">
-        <img 
-          src={product.image_url || "/api/placeholder/300/300"} 
+      <div className="relative overflow-hidden">
+        <img
+          src={product.image_url || "/api/placeholder/300/300"}
           alt={product.name}
-          className="w-full h-48 object-cover"
+          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
         />
-        <button className="absolute top-2 right-2 p-1.5 bg-white rounded-full opacity-80 hover:opacity-100">
-          <Heart className="w-5 h-5 text-gray-600" />
+        <button className="absolute top-2 right-2 p-1.5 bg-white rounded-full transform translate-x-0 transition-all duration-300 hover:scale-110">
+          <Heart className="w-5 h-5 text-gray-600 hover:text-red-500 transition-colors duration-300" />
         </button>
+        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
       </div>
-      <div className="p-4">
-        <h3 className="font-medium text-lg mb-1">{product.name}</h3>
-        <div className="text-xl font-semibold mb-2">₹ {product.price}</div>
+      <div className="p-4 transform transition-transform duration-300 group-hover:translate-y-1">
+        <h3 className="font-medium text-lg mb-1 transition-colors duration-300 group-hover:text-pink-600">{product.name}</h3>
+        <div className="text-xl font-semibold mb-2 transition-all duration-300 group-hover:scale-110 origin-left">₹ {product.price}</div>
         <div className="flex items-center gap-2 mb-2">
-          <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-100 text-green-800">
-            <span className="text-sm">★ {product.rating}</span>
+          <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-100 text-green-800 transition-all duration-300 group-hover:bg-green-200">
+            <span className="text-sm transform transition-transform group-hover:scale-110">★ {product.rating}</span>
           </span>
           {product.review_count > 0 && (
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 transition-opacity duration-300 group-hover:opacity-75">
               ({product.review_count} Reviews)
             </span>
           )}
-        </div>
-        <div className="text-sm text-gray-500">
-          Earliest Delivery: In 3 hours
         </div>
       </div>
     </div>
@@ -229,13 +227,13 @@ const Orders = () => {
               <h2 className="text-2xl font-bold mb-1">{category.category_name}</h2>
               <p className="text-gray-600">{category.category_description}</p>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            <Link 
-              to={`/category/${category.category_name}`}
-              rel="noopener noreferrer"
-            >
-              View All
-            </Link>
+            <button className="px-4 py-2 bg-[#f0adbc] text-black rounded-md transition-all duration-300 hover:bg-[#f8bbd0] hover:shadow-lg hover:scale-105">
+              <Link
+                to={`/category/${category.category_name}`}
+                rel="noopener noreferrer"
+              >
+                View All
+              </Link>
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

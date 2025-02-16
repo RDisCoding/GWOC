@@ -1,9 +1,14 @@
-// Modified Home.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReviewDialog from './ReviewDialog';
+import HeroCarousel from "./HeroCarousel";
+import CategoryNav from "./CategoryNav";
+import ProductSection from "./ProductSection";
+import AboutUs from "./AboutUs";
+import Reviews from "./Reviews";
 
 const Home = () => {
+  // State from original Home.jsx
   const [pendingReview, setPendingReview] = useState(null);
   const [showThankYou, setShowThankYou] = useState(false);
 
@@ -28,12 +33,113 @@ const Home = () => {
     setTimeout(() => setShowThankYou(false), 3000);
   };
 
+  const handleNavAction = async (action) => {
+    switch(action) {
+      case 'checkReviews':
+        await checkPendingReviews();
+        break;
+      case 'closeReview':
+        setPendingReview(null);
+        break;
+      // Add more actions as needed
+      default:
+        break;
+    }
+  };
+
+  // Product data from Ignore.jsx
+  const bestsellers = [
+    {
+      id: 1,
+      name: "Classic Vanilla Cupcake",
+      image: "https://sugargeekshow.com/wp-content/uploads/2022/08/vanilla_cupcake_featured_blog.jpg",
+      price: "$3.99",
+    },
+    {
+      id: 2,
+      name: "Classic Vanilla Cupcake",
+      image: "/placeholder.svg",
+      price: "$3.99",
+    },
+    {
+      id: 3,
+      name: "Classic Vanilla Cupcake",
+      image: "/placeholder.svg",
+      price: "$3.99",
+    },
+    {
+      id: 4,
+      name: "Classic Vanilla Cupcake",
+      image: "/placeholder.svg",
+      price: "$3.99",
+    },
+    {
+      id: 5,
+      name: "Classic Vanilla Cupcake",
+      image: "/placeholder.svg",
+      price: "$3.99",
+    }
+  ];
+
+  const newAdditions = [
+    {
+      id: 1,
+      name: "Rainbow Cake",
+      image: "/placeholder.svg",
+      price: "$24.99",
+    },
+    {
+      id: 2,
+      name: "Classic Vanilla Cupcake",
+      image: "https://sugargeekshow.com/wp-content/uploads/2022/08/vanilla_cupcake_featured_blog.jpg",
+      price: "$3.99",
+    },
+    {
+      id: 3,
+      name: "Classic Vanilla Cupcake",
+      image: "/placeholder.svg",
+      price: "$3.99",
+    },
+    {
+      id: 4,
+      name: "Classic Vanilla Cupcake",
+      image: "/placeholder.svg",
+      price: "$3.99",
+    },
+    {
+      id: 5,
+      name: "Classic Vanilla Cupcake",
+      image: "/placeholder.svg",
+      price: "$3.99",
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">Welcome to Our Platform</h1>
-        <p className="text-xl text-black">Explore our amazing products and services</p>
-      </div>
+    <div className="min-h-screen bg-white flex flex-col">
+      
+      <main className="flex-grow">
+        <HeroCarousel />
+        
+        <div className="relative z-10">
+          <CategoryNav />
+        </div>
+
+        <div className="relative z-20 -mt-8">
+          <ProductSection title="Our Bestsellers" products={bestsellers} />
+        </div>
+
+        <div className="relative z-20 -mt-8">
+          <ProductSection title="New Additions" products={newAdditions} />
+        </div>
+
+        <div className="relative z-20 -mt-8">
+          <AboutUs />
+        </div>
+
+        <div className="relative z-20 -mt-8">
+          <Reviews />
+        </div>
+      </main>
 
       {pendingReview && (
         <ReviewDialog
