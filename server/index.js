@@ -3,10 +3,17 @@ const app = express();
 const cors = require('cors');  
 const pool = require('./db'); // Your database connection
 const auth = require('./middleware/authorization');
+require('dotenv').config(); // Add at top
+const twilio = require('twilio');
 
 // Middleware
 app.use(express.json()); //req.body
 app.use(cors());
+
+const TwilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 // routes
 // register and login routes
@@ -19,7 +26,7 @@ app.use("/cart", require("./routes/cart"));
 app.use('/admin', require('./routes/admin'));
 app.use("/api/reviews", require("./routes/reviews"));
 app.use("/hampers", require("./routes/hampers"));
-
+app.set('twilioClient', TwilioClient); // Make available to routes
 
 app.listen(5000, () => {
   console.log('Server is running on port 5000');

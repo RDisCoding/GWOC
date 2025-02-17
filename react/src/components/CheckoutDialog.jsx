@@ -61,8 +61,8 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
   const handlePayment = async () => {
     // Validate form
     const errors = {};
-    if (!phone.match(/^\+?[1-9]\d{1,14}$/)) {
-      errors.phone = 'Valid phone number required';
+    if (!phone.match(/^\+?[1-9]\d{9,14}$/)) {
+      errors.phone = 'Valid phone number with country code required';
     }
     
     if (Object.keys(errors).length > 0) {

@@ -2,6 +2,8 @@
 const router = require("express").Router();
 const pool = require('../db');
 const authorization = require("../middleware/authorization");
+const twilio = require('twilio');
+const TWILIO_PHONE = process.env.TWILIO_PHONE;
 
 // // Add item to cart
 // router.post("/add", authorization, async (req, res) => {
@@ -664,6 +666,35 @@ router.post("/checkout", authorization, async (req, res) => {
         `, [req.user]);
 
         await client.query('COMMIT');
+
+        // WhatsApp notification logic
+try {
+    const order = orderRes.rows[0];
+    
+    // Get user details
+    const userRes = await pool.query(
+      'SELECT user_name FROM users WHERE user_id = $1',
+      [req.user]
+    );
+    
+    // Format items
+    const itemsList = order.items
+      .map(item => `  • ${item.name} x${item.quantity} - ₹${item.price * item.quantity}`)
+      .join('\n');
+  
+    // Construct message
+    const message = `🎂 Order Confirmation 🎂\nHello ${userRes.rows[0].user_name},\nThank you for your order! Here are your order details:\n🔹 Order ID: ${order.order_id}\n🔹 Items:\n${itemsList}\n🔹 Total: ₹${order.total}\nYour order is being prepared with love! We’ll notify you once it’s ready for pickup/delivery.\nLooking forward to serving you again! 🍰✨\n\n🍩 Bindi's Cupcakery 🍩\n📞 Contact: +91845645454`;
+  
+    // Send WhatsApp
+    await req.app.get('twilioClient').messages.create({
+      body: message,
+      from: TWILIO_PHONE,
+      to: `whatsapp:${order.contact_phone}`
+    });
+  } catch (error) {
+    console.error('WhatsApp notification failed:', error.message);
+  }
+  
 
         res.json({
             success: true,
