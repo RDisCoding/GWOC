@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CustomizeHamperDialog from './CustomizeHampersDialog';
+import CustomizeDessertBox from './CustomizeDessertBox';
 
 const Hampers = () => {
   const [hampers, setHampers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCustomizeDialog, setShowCustomizeDialog] = useState(false);
+  const [showCustomizeDialog2, setShowCustomizeDialog2] = useState(false);
 
   useEffect(() => {
     fetchHampers();
@@ -43,6 +45,24 @@ const Hampers = () => {
         <CustomizeHamperDialog 
           isOpen={showCustomizeDialog}
           onClose={() => setShowCustomizeDialog(false)}
+        />
+      </div>
+    </div>
+  );
+
+  const CustomizeDialog2 = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+      <div className="bg-white w-11/12 h-5/6 rounded-lg p-6 relative">
+        <button 
+          onClick={() => setShowCustomizeDialog2(false)}
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+        >
+          ✕
+        </button>
+        <h2 className="text-2xl font-bold mb-4">Customize Your Hamper</h2>
+        <CustomizeDessertBox 
+          isOpen={showCustomizeDialog2}
+          onClose={() => setShowCustomizeDialog2(false)}
         />
       </div>
     </div>
@@ -139,6 +159,21 @@ const Hampers = () => {
         </div>
       </div>
 
+      <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg p-6 mb-8">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Create Your Perfect Dessert</h2>
+            <p className="text-gray-600">Make a dessert with your favorite items</p>
+          </div>
+          <button 
+            onClick={() => setShowCustomizeDialog2(true)}
+            className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+          >
+            Make Your Dessert Box
+          </button>
+        </div>
+      </div>
+
       <div className="mb-12">
         <h2 className="text-2xl font-bold mb-6">Premium Gift Hampers</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -149,6 +184,7 @@ const Hampers = () => {
       </div>
 
       {showCustomizeDialog && <CustomizeDialog />}
+      {showCustomizeDialog2 && <CustomizeDialog2 />}
     </div>
   );
 };

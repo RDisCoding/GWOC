@@ -544,7 +544,6 @@ router.get("/current-orders", async (req, res) => {
        ORDER BY c.created_at DESC`
     );
 
-    console.log("Fetched Orders:", result.rows); // Debugging line
     res.json(result.rows);
   } catch (err) {
     console.error("Error fetching current orders:", err);
@@ -552,6 +551,183 @@ router.get("/current-orders", async (req, res) => {
   }
 });
 
+router.put("/current-orders/:orderId/status", async (req, res) => {
+  const { orderId } = req.params;
+  const { status, rejection_reason } = req.body; // Add rejection_reason from request
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // First check if order exists
+    const currentOrder = await client.query(
+      'SELECT * FROM current_orders WHERE order_id = $1',
+      [orderId]
+    );
+    
+    if (currentOrder.rows.length === 0) {
+      throw new Error('Order not found');
+    }
+    
+    const orderData = currentOrder.rows[0];
+    const now = new Date();
+
+    console.log("Order Items before inserting:", orderData.items);
+    
+    if (status === 'rejected') {
+      // Insert into order_history with correct columns
+      const parsedItems = JSON.stringify(orderData.items); // Convert array to JSON string
+
+        await client.query(`
+          INSERT INTO order_history (
+            order_id, 
+            user_id, 
+            items, 
+            total, 
+            created_at,
+            contact_phone,
+            order_status,
+            admin_status,
+            rejected_at,
+            rejection_reason,
+            reviewed,
+            review_request_sent,
+            reviews_processed,
+            status
+          )
+          VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        `, [
+          orderData.order_id,
+          orderData.user_id,
+          parsedItems,  // ✅ Ensure JSONB compatibility
+          orderData.total,
+          orderData.created_at,
+          orderData.contact_phone,
+          'rejected',
+          'rejected',
+          now,
+          rejection_reason || null,
+          false, // reviewed
+          false, // review_request_sent
+          false, // reviews_processed
+          'rejected' // status
+        ]);
+
+      // Delete from current_orders
+      await client.query(
+        'DELETE FROM current_orders WHERE order_id = $1',
+        [orderId]
+      );
+    } else if (status === 'accepted') {
+      // Update current_orders
+      await client.query(`
+        UPDATE current_orders 
+        SET 
+          admin_status = $1,
+          accepted_at = $2
+        WHERE order_id = $3
+      `, ['accepted', now, orderId]);
+    }
+    
+    await client.query('COMMIT');
+    res.json({ 
+      message: `Order ${status} successfully`,
+      order: currentOrder.rows[0]
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error("Error updating order status:", error);
+    res.status(500).json({ 
+      error: "Internal Server Error",
+      details: error.message 
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Handle pickup status
+// router.put("/current-orders/:orderId/pickup-status", async (req, res) => {
+//   const { orderId } = req.params;
+//   const client = await pool.connect();
+  
+//   try {
+//     const currentOrder = await client.query(
+//       'SELECT pickup_status FROM current_orders WHERE order_id = $1',
+//       [orderId]
+//     );
+    
+//     if (currentOrder.rows.length === 0) {
+//       return res.status(404).json({ error: "Order not found" });
+//     }
+    
+//     const newStatus = currentOrder.rows[0].pickup_status === 'preparing' 
+//       ? 'ready_for_pickup' 
+//       : 'preparing';
+    
+//     await client.query(
+//       'UPDATE current_orders SET pickup_status = $1 WHERE order_id = $2',
+//       [newStatus, orderId]
+//     );
+    
+//     res.json({ 
+//       message: "Pickup status updated successfully",
+//       new_status: newStatus
+//     });
+    
+//   } catch (error) {
+//     console.error("Error updating pickup status:", error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   } finally {
+//     client.release();
+//   }
+// });
+
+router.put("/current-orders/:orderId/pickup-status", async (req, res) => {
+  const { orderId } = req.params;
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Get current pickup status
+    const currentOrder = await client.query(
+      'SELECT pickup_status FROM current_orders WHERE order_id = $1',
+      [orderId]
+    );
+    
+    if (currentOrder.rows.length === 0) {
+      throw new Error('Order not found');
+    }
+    
+    // Toggle between 'preparing' and 'ready_for_pickup'
+    const currentStatus = currentOrder.rows[0].pickup_status;
+    const newStatus = currentStatus === 'ready_for_pickup' ? 'preparing' : 'ready_for_pickup';
+    
+    // Update pickup status
+    await client.query(
+      'UPDATE current_orders SET pickup_status = $1 WHERE order_id = $2',
+      [newStatus, orderId]
+    );
+    
+    await client.query('COMMIT');
+    res.json({ 
+      message: "Pickup status updated successfully",
+      new_status: newStatus
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error("Error updating pickup status:", error);
+    res.status(500).json({ 
+      error: "Internal Server Error",
+      details: error.message 
+    });
+  } finally {
+    client.release();
+  }
+});
 
 router.put("/current-orders/:orderId/pickup", async (req, res) => {
   const { orderId } = req.params;

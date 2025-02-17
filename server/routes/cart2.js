@@ -600,7 +600,6 @@ router.post("/checkout", authorization, async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Get cart details with both products and hampers
         const cartItemsQuery = `
             SELECT 
                 ci.*,
@@ -622,7 +621,6 @@ router.post("/checkout", authorization, async (req, res) => {
 
         const cartRes = await client.query(cartItemsQuery, [req.user]);
 
-        // Also include hampers from the request body if they exist
         let allItems = [...cartRes.rows];
         if (req.body.hampers && req.body.hampers.length > 0) {
             allItems = [...allItems, ...req.body.hampers.map(hamper => ({
@@ -636,11 +634,10 @@ router.post("/checkout", authorization, async (req, res) => {
             throw new Error('Cart is empty');
         }
 
-        // 2. Create current order with combined items
         const orderRes = await client.query(`
             INSERT INTO current_orders 
-                (user_id, items, total, contact_phone, payment_mode, admin_status)
-            VALUES ($1, $2, $3, $4, $5, 'pending')
+                (user_id, items, total, contact_phone, pickup_status, payment_mode)
+            VALUES ($1, $2, $3, $4, 'pending', $5)
             RETURNING *;
         `, [
             req.user,
@@ -658,7 +655,6 @@ router.post("/checkout", authorization, async (req, res) => {
             req.body.payment_mode
         ]);
 
-        // 3. Clear cart after order is placed
         await client.query(`
             DELETE FROM cart_items 
             WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1);
@@ -683,5 +679,4 @@ router.post("/checkout", authorization, async (req, res) => {
         client.release();
     }
 });
-
 module.exports = router;

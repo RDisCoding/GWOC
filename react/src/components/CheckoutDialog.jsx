@@ -54,17 +54,34 @@ const Button = ({ children, className = "", ...props }) => (
 
 const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) => {
   const [paymentStatus, setPaymentStatus] = useState('pending');
+  const [paymentMode, setPaymentMode] = useState(null);
+  const [showQRDialog, setShowQRDialog] = useState(false);
   const [localCart, setLocalCart] = useState(null);
   const [phone, setPhone] = useState('');
   const [formErrors, setFormErrors] = useState({});
 
-  const handlePayment = async () => {
-    // Validate form
+  const validatePhone = () => {
     const errors = {};
-    if (!phone.match(/^\+?[1-9]\d{1,14}$/)) {
+    if (!phone || !phone.match(/^\+?[1-9]\d{1,14}$/)) {
       errors.phone = 'Valid phone number required';
+      return errors;
     }
-    
+    return {};
+  };
+
+  const handlePaymentModeSelect = (mode) => {
+    const errors = validatePhone();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setPaymentMode(mode);
+    setShowQRDialog(true);
+    setFormErrors({});
+  };
+
+  const handlePayment = async (mode) => {
+    const errors = validatePhone();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -74,12 +91,12 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
       setPaymentStatus('processing');
       setLocalCart(cart);
   
-      // Prepare the checkout data including both cart items and hampers
       const checkoutData = {
         total: cart.total,
         phone: phone,
         cart_items: cart.items,
-        hampers: hampers // Include hampers data in the checkout request
+        hampers: hampers,
+        payment_mode: mode
       };
 
       const response = await fetch('http://localhost:5000/cart/checkout', {
@@ -91,7 +108,10 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
         body: JSON.stringify(checkoutData)
       });
   
-      if (!response.ok) throw new Error('Checkout failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Checkout failed');
+      }
   
       const data = await response.json();
       
@@ -103,16 +123,68 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
     } catch (error) {
       console.error('Payment error:', error);
       setPaymentStatus('pending');
+      setShowQRDialog(false);
       alert('Checkout failed: ' + error.message);
     }
   };
 
-  // Calculate total including both cart items and hampers
   const calculateTotal = () => {
     const cartTotal = cart.total || 0;
     const hampersTotal = hampers?.reduce((sum, hamper) => sum + (hamper.price * hamper.quantity), 0) || 0;
     return cartTotal + hampersTotal;
   };
+
+  const PaymentOptionsDialog = () => (
+    <div className="space-y-4">
+      <div className="border rounded-lg p-4 space-y-2">
+        <h3 className="font-medium">Choose Payment Method</h3>
+        <div className="space-y-3">
+          <Button 
+            onClick={() => handlePaymentModeSelect('takeaway')}
+            className="w-full bg-blue-600"
+          >
+            Pay on Takeaway
+          </Button>
+          <Button 
+            onClick={() => handlePaymentModeSelect('online')}
+            className="w-full bg-green-600"
+          >
+            Pay Online
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const QRDialog = () => (
+    <div className="space-y-4">
+      <div className="flex justify-center">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
+          alt="Payment QR Code"
+          className="border rounded-lg"
+        />
+      </div>
+      {paymentMode === 'takeaway' ? (
+        <div className="text-center">
+          <p>Order placed. To confirm your order, please discuss with the owner for acceptance.</p>
+          <Button 
+            onClick={() => handlePayment('takeaway')}
+            className="w-full mt-4"
+          >
+            Confirm Order
+          </Button>
+        </div>
+      ) : (
+        <Button 
+          onClick={() => handlePayment('online')}
+          className="w-full"
+        >
+          Pay ₹ {calculateTotal()}
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -123,7 +195,7 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
           </DialogTitle>
         </DialogHeader>
         
-        {paymentStatus === 'pending' && (
+        {paymentStatus === 'pending' && !showQRDialog && (
           <div className="space-y-4">
             <div className="space-y-3">
               <div>
@@ -142,18 +214,9 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
                 )}
               </div>
             </div>
-
-            <div className="flex justify-center">
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
-                alt="Payment QR Code"
-                className="border rounded-lg"
-              />
-            </div>
             
             <div className="border rounded-lg p-4 space-y-2">
               <h3 className="font-medium">Order Summary</h3>
-              {/* Regular cart items */}
               {cart.items?.map(item => (
                 <div key={item.cart_item_id} className="flex justify-between text-sm">
                   <span>{item.name} x {item.quantity}</span>
@@ -161,7 +224,6 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
                 </div>
               ))}
               
-              {/* Hampers items */}
               {hampers?.map(hamper => (
                 <div key={hamper.hamper_id} className="flex justify-between text-sm">
                   <span>{hamper.name} (Hamper) x {hamper.quantity}</span>
@@ -174,8 +236,12 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
                 <span>₹ {calculateTotal()}</span>
               </div>
             </div>
+            
+            <PaymentOptionsDialog />
           </div>
         )}
+        
+        {paymentStatus === 'pending' && showQRDialog && <QRDialog />}
         
         {paymentStatus === 'processing' && (
           <div className="py-8 text-center">
@@ -197,7 +263,6 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
             
             <div className="border rounded-lg p-4 space-y-2">
               <h3 className="font-medium">Invoice</h3>
-              {/* Regular cart items in invoice */}
               {localCart?.items?.map(item => (
                 <div key={item.cart_item_id} className="flex justify-between text-sm">
                   <span>{item.name} x {item.quantity}</span>
@@ -205,7 +270,6 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
                 </div>
               ))}
               
-              {/* Hampers in invoice */}
               {hampers?.map(hamper => (
                 <div key={hamper.hamper_id} className="flex justify-between text-sm">
                   <span>{hamper.name} (Hamper) x {hamper.quantity}</span>
@@ -222,15 +286,6 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
         )}
         
         <DialogFooter>
-          {paymentStatus === 'pending' && (
-            <Button 
-              onClick={handlePayment}
-              className="w-full"
-              disabled={(!cart.items?.length && !hampers?.length) || calculateTotal() <= 0}
-            >
-              Pay ₹ {calculateTotal()}
-            </Button>
-          )}
           {paymentStatus === 'completed' && (
             <Button 
               onClick={onClose}
