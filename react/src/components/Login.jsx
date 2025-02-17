@@ -80,7 +80,7 @@ const Login = ({ setAuth }) => {
 
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+    <div className="flex justify-center items-center min-h-screen bg-pink-50">
       <div className="bg-white p-8 shadow-lg rounded-lg w-96">
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">Login</h1>
         <form onSubmit={onSubmit} className="space-y-4">
@@ -104,7 +104,7 @@ const Login = ({ setAuth }) => {
           />
           <button 
             type="submit"
-            className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition duration-200"
+            className="w-full bg-[#6c79b0] text-white py-3 rounded-lg hover:bg-blue-600 transition duration-200"
           >
             Login
           </button>

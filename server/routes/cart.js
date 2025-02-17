@@ -641,8 +641,8 @@ router.post("/checkout", authorization, async (req, res) => {
         // 2. Create current order with combined items
         const orderRes = await client.query(`
             INSERT INTO current_orders 
-                (user_id, items, total, contact_phone, pickup_status)
-            VALUES ($1, $2, $3, $4, 'pending')
+                (user_id, items, total, contact_phone, payment_mode, admin_status)
+            VALUES ($1, $2, $3, $4, $5, 'pending')
             RETURNING *;
         `, [
             req.user,
@@ -656,7 +656,8 @@ router.post("/checkout", authorization, async (req, res) => {
                 item_type: item.item_type
             }))),
             req.body.total,
-            req.body.phone
+            req.body.phone,
+            req.body.payment_mode
         ]);
 
         // 3. Clear cart after order is placed

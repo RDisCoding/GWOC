@@ -519,3 +519,33 @@ CHECK (
     (product_id IS NOT NULL AND hamper_id IS NULL) OR 
     (product_id IS NULL AND hamper_id IS NOT NULL)
 );
+
+ALTER TABLE current_orders
+ADD COLUMN admin_status VARCHAR(20) NOT NULL DEFAULT 'pending'
+  CHECK (admin_status IN ('pending', 'accepted', 'rejected'));
+
+-- Allow NULL for rejected orders
+ALTER TABLE order_history 
+ALTER COLUMN picked_up_at DROP NOT NULL;
+
+-- Add status field to track completion/rejection
+ALTER TABLE order_history
+ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'completed'
+  CHECK (status IN ('completed', 'rejected'));
+
+-- Add payment_mode column to current_orders
+ALTER TABLE current_orders 
+ADD COLUMN payment_mode VARCHAR(20) NOT NULL DEFAULT 'takeaway'
+CHECK (payment_mode IN ('takeaway', 'online'));
+
+-- Add admin_status to order_history
+ALTER TABLE order_history 
+ADD COLUMN admin_status VARCHAR(20);
+
+-- Add pickup_status column to current_orders if it doesn't exist
+ALTER TABLE current_orders ADD COLUMN IF NOT EXISTS pickup_status VARCHAR(20) NOT NULL 
+DEFAULT 'pending' 
+CHECK (pickup_status IN ('pending', 'preparing', 'ready_for_pickup', 'picked_up'));
+
+ALTER TABLE order_history
+ADD COLUMN payment_mode VARCHAR(50);

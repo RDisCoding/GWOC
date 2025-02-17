@@ -154,7 +154,7 @@ const Cart = () => {
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-pink-50 p-4 flex items-center justify-center">
         <div className="text-gray-600">Loading...</div>
       </div>
     );
@@ -163,14 +163,14 @@ const Cart = () => {
   // Show error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-pink-50 p-4 flex items-center justify-center">
         <div className="text-red-600">Error: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-pink-50 p-4 md:p-8">
       {!isAcceptingOrders && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
           We're currently not accepting orders. Any existing cart items will be saved for later.
