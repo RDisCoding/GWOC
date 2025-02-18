@@ -684,13 +684,20 @@ try {
       .join('\n');
   
     // Construct message
-    const message = `🎂 Order Confirmation 🎂\nHello ${userRes.rows[0].user_name},\nThank you for your order! Here are your order details:\n🔹 Order ID: ${order.order_id}\n🔹 Items:\n${itemsList}\n🔹 Total: ₹${order.total}\nYour order is being prepared with love! We’ll notify you once it’s ready for pickup/delivery.\nLooking forward to serving you again! 🍰✨\n\n🍩 Bindi's Cupcakery 🍩\n📞 Contact: +91845645454`;
+    const message = `🎂 Order Placed Successfully 🎂\n\n
+    Hello ${userRes.rows[0].user_name},\n
+    Your order has been placed successfully! Here are your order details:\n
+    🔹 Order ID: ${order.order_id}\n
+    🔹 Items:\n${itemsList}\n
+    🔹 Total: ₹${order.total}\n
+    We are now processing your order. You’ll receive updates once it is accepted.\n\n
+    🍩 Bindi's Cupcakery 🍩\n📞 Contact: +918849130189`;
   
     // Send WhatsApp
     await req.app.get('twilioClient').messages.create({
       body: message,
       from: TWILIO_PHONE,
-      to: `whatsapp:${order.contact_phone}`
+      to: `whatsapp:+91${order.contact_phone}`
     });
   } catch (error) {
     console.error('WhatsApp notification failed:', error.message);

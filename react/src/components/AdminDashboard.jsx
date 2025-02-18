@@ -265,13 +265,13 @@ const AdminDashboard = () => {
                                 className={`w-full px-4 py-2 rounded transition-colors ${
                                   order.pickup_status === 'ready_for_pickup'
                                     ? 'bg-green-500 hover:bg-green-600 text-white'
-                                    : 'bg-red-500 hover:bg-red-600 text-white'
+                                    : 'bg-green-500 hover:bg-green-600 text-white'
                                 }`}
                                 onClick={() => handlePickupStatus(order.order_id)}
                               >
                                 {order.pickup_status === 'ready_for_pickup' 
                                   ? 'Order is ready for pickup'
-                                  : 'Not ready for pickup yet'}
+                                  : 'Mark order ready for pickup'}
                               </button>
                               
                               {order.pickup_status === 'ready_for_pickup' && (
