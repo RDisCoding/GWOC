@@ -14,6 +14,9 @@ const TwilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
+const whatsappRoutes = require("./routes/whatsapp");
+app.use("/api/whatsapp", whatsappRoutes);
+
 
 // routes
 // register and login routes
