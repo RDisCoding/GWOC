@@ -84,7 +84,7 @@
 
 // export default Navbar;
 
-import { Store, Search, Package2, CakeSlice, ShoppingCart, User, LogIn, Grid } from "lucide-react"
+import { Store, Search, Package2, History, CakeSlice, ShoppingCart, User, LogIn, Grid } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 
@@ -148,6 +148,7 @@ function Navbar({ isAuthenticated, setAuth, userName }) {
     { name: "Truffle Balls", path: "/category/Truffle%20Balls" },
     { name: "Hampers", path: "/hampers" },
     { name: "See All", path: "/orders" },
+    { name: "Track Order", path: "/track-order" },
   ];
   
 

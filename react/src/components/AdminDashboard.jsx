@@ -195,14 +195,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const requestReview = async (orderId) => {
-    try {
-      await axios.post(`http://localhost:5000/admin/order-history/${orderId}/request-review`);
-      fetchOrderHistory(); // Refresh order history
-    } catch (error) {
-      console.error("Error requesting review:", error);
-    }
-  };
   const renderContent = () => {
     switch (activeTab) {
       case "Dashboard":
@@ -378,12 +370,12 @@ const AdminDashboard = () => {
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center gap-2">
             <img
-              src="/animations/Logo.png"
+              src="/images/Logo.png"
               alt="Bindi's Cupcakery"
               className="h-12 w-12 object-contain"
             />
             <img
-              src="/animations/Name.png"
+              src="/images/Name.png"
               alt="Bindi's Cupcakery"
               className="h-8 object-contain"
             />

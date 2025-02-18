@@ -23,6 +23,7 @@ import AdminLogin from "./components/AdminLogin";
 import PageLoader from "./components/PageLoader";
 import Footer from "./components/Footer";
 import WhatsAppButton from "./components/WhatsAppButton";
+import TrackOrder from './components/TrackOrder';
 
 const AdminProtectedRoute = ({ children }) => {
   const isAdmin = localStorage.getItem("isAdmin") === "true";
@@ -171,6 +172,7 @@ const AppContent = () => {
                 <Route path="/product/:id" element={<ProductDetails />} />
                 <Route path="/category/:categoryName" element={<ViewAllProducts />} />
                 <Route path="/hampers/:id" element={<HamperDetails />} />
+                <Route path="/track-order" element={<TrackOrder />} />
                 <Route
                   path="/admin/login"
                   element={

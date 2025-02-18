@@ -1070,13 +1070,6 @@ router.patch("/reviews/:reviewId/toggle-homepage", async (req, res) => {
         "SELECT COUNT(*) FROM reviews WHERE display_on_homepage = true"
       );
       
-      // Limit to 5 reviews on homepage
-      if (parseInt(count) >= 5) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ 
-          error: "Maximum number of homepage reviews reached (5). Please remove one before adding another." 
-        });
-      }
     }
     
     // Toggle the status
