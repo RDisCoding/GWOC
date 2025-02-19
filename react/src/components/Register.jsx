@@ -93,9 +93,10 @@ const Register = ({setAuth}) => {
     name: '',
     email: '',
     password: '',
+    phone: ''
   });
 
-  const { name, email, password } = inputs;
+  const { name, email, password, phone } = inputs;
 
   const onChange = (e) => {
     setInputs({ ...inputs, [e.target.name]: e.target.value });
@@ -104,7 +105,7 @@ const Register = ({setAuth}) => {
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
-        const body = {email, password, name}
+        const body = {email, password, name, phone}
 
         const response = await fetch("http://localhost:5000/auth/register", {
             method: "POST",
@@ -117,15 +118,14 @@ const Register = ({setAuth}) => {
         if (parseRes.token) {
           localStorage.setItem("token", parseRes.token)
           setAuth(true);
-          navigate('/'); // Redirect to home page after successful registration
+          navigate('/');
         } else {
-          // Handle registration error (show message to user)
           console.error("Registration failed");
         }
     } catch (err) {
         console.error(err.message)
     }
-};
+  };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -137,7 +137,7 @@ const Register = ({setAuth}) => {
             name="name"
             placeholder="Full Name"
             value={name}
-            onChange={e => onChange(e)}
+            onChange={onChange}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
           />
@@ -146,7 +146,16 @@ const Register = ({setAuth}) => {
             name="email"
             placeholder="Email"
             value={email}
-            onChange={e => onChange(e)}
+            onChange={onChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            required
+          />
+          <input
+            type="tel"
+            name="phone"
+            placeholder="Phone Number"
+            value={phone}
+            onChange={onChange}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
           />
@@ -155,7 +164,7 @@ const Register = ({setAuth}) => {
             name="password"
             placeholder="Password"
             value={password}
-            onChange={e => onChange(e)}
+            onChange={onChange}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
           />

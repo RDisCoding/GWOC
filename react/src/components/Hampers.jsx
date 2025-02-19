@@ -1,19 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import CustomizeHamperDialog from './CustomizeHampersDialog';
+import { Link, useSearchParams } from 'react-router-dom';
 import CustomizeDessertBox from './CustomizeDessertBox';
 
 const Hampers = () => {
+  const [searchParams] = useSearchParams();
   const [hampers, setHampers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showCustomizeDialog, setShowCustomizeDialog] = useState(false);
   const [showCustomizeDialog2, setShowCustomizeDialog2] = useState(false);
+  const searchQuery = searchParams.get('q') || '';
 
   useEffect(() => {
-    fetchHampers();
-  }, []);
+    if (searchQuery) {
+      searchHampers(searchQuery);
+    } else {
+      fetchHampers();
+    }
+  }, [searchQuery]);
+
+  const searchHampers = async (query) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:5000/hampers/search?query=${encodeURIComponent(query)}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch search results');
+      }
+
+      const parseRes = await response.json();
+      setHampers(parseRes);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchHampers = async () => {
     try {
@@ -31,24 +53,6 @@ const Hampers = () => {
       setLoading(false);
     }
   };
-
-  const CustomizeDialog = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-      <div className="bg-white w-11/12 h-5/6 rounded-lg p-6 relative">
-        <button 
-          onClick={() => setShowCustomizeDialog(false)}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-        >
-          ✕
-        </button>
-        <h2 className="text-2xl font-bold mb-4">Customize Your Hamper</h2>
-        <CustomizeHamperDialog 
-          isOpen={showCustomizeDialog}
-          onClose={() => setShowCustomizeDialog(false)}
-        />
-      </div>
-    </div>
-  );
 
   const CustomizeDialog2 = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
@@ -147,21 +151,6 @@ const Hampers = () => {
       <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg p-6 mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Create Your Perfect Hamper</h2>
-            <p className="text-gray-600">Customize a hamper with your favorite items</p>
-          </div>
-          <button 
-            onClick={() => setShowCustomizeDialog(true)}
-            className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-          >
-            Make Your Own Hamper
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg p-6 mb-8">
-        <div className="flex justify-between items-center">
-          <div>
             <h2 className="text-2xl font-bold mb-2">Create Your Perfect Dessert</h2>
             <p className="text-gray-600">Make a dessert with your favorite items</p>
           </div>
@@ -175,15 +164,27 @@ const Hampers = () => {
       </div>
 
       <div className="mb-12">
-        <h2 className="text-2xl font-bold mb-6">Premium Gift Hampers</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {hampers.map((hamper) => (
-            <HamperCard key={hamper.id} hamper={hamper} />
-          ))}
-        </div>
+        {hampers.length === 0 && searchQuery ? (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">No hampers found</h2>
+            <p className="text-gray-600">
+              We couldn't find any hampers matching &quot;{searchQuery}&quot;
+            </p>
+          </div>
+        ) : (
+          <>
+            <h2 className="text-2xl font-bold mb-6">
+              {searchQuery ? `Search Results for "${searchQuery}"` : 'Premium Gift Hampers'}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {hampers.map((hamper) => (
+                <HamperCard key={hamper.id} hamper={hamper} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
-      {showCustomizeDialog && <CustomizeDialog />}
       {showCustomizeDialog2 && <CustomizeDialog2 />}
     </div>
   );

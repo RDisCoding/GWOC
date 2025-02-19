@@ -10,11 +10,10 @@ const jwt = require('jsonwebtoken');
 // registering
 router.post("/register", async(req, res) => {
     try {
+        // 1. destructure the req.body
+        const {name, email, password, phone} = req.body;
 
-        // 1. destructure the req.body(name, email, password)
-        const {name, email, password} = req.body;
-
-        // 2. check if user exists (if user exists then throw error)
+        // 2. check if user exists
         const user = await pool.query("SELECT * FROM users WHERE user_email = $1", [email]);
 
         if(user.rows.length !== 0){
@@ -27,7 +26,10 @@ router.post("/register", async(req, res) => {
         const bycrptPassword = await bcrypt.hash(password, salt);
 
         // 4. enter the new user inside our database
-        const newUser = await pool.query("INSERT INTO users (user_name, user_email, user_password) VALUES ($1, $2, $3) RETURNING *", [name, email, bycrptPassword]);
+        const newUser = await pool.query(
+            "INSERT INTO users (user_name, user_email, user_password, user_phone) VALUES ($1, $2, $3, $4) RETURNING *", 
+            [name, email, bycrptPassword, phone]
+        );
 
         // 5. generating our jwt token
         const token = jwtGenerator(newUser.rows[0].user_id);
@@ -38,6 +40,25 @@ router.post("/register", async(req, res) => {
         res.status(500).send("Server Error");
     }
 });
+
+router.get("/user-data", authorization, async (req, res) => {
+    try {
+      // req.user is already the user_id from your middleware
+      const user = await pool.query(
+        "SELECT user_name, user_email, user_phone FROM users WHERE user_id = $1",
+        [req.user]  // Using req.user directly since it's already the user_id
+      );
+  
+      if (user.rows.length === 0) {
+        return res.status(404).json("User not found");
+      }
+  
+      res.json(user.rows[0]);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send("Server error");
+    }
+  });
 
 // login
 router.post("/login", async(req, res) => {

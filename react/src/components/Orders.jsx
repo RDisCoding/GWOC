@@ -127,17 +127,41 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 
 const Orders = () => {
+  const [searchParams] = useSearchParams();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const searchQuery = searchParams.get('q') || '';
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if (searchQuery) {
+      searchProducts(searchQuery);
+    } else {
+      fetchCategories();
+    }
+  }, [searchQuery]);
+
+  const searchProducts = async (query) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:5000/orders/search?query=${encodeURIComponent(query)}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch search results');
+      }
+
+      const parseRes = await response.json();
+      setCategories(parseRes);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -220,29 +244,40 @@ const Orders = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      {categories.map((category) => (
-        <div key={category.category_id} className="mb-12">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-1">{category.category_name}</h2>
-              <p className="text-gray-600">{category.category_description}</p>
-            </div>
-            <button className="px-4 py-2 bg-[#f0adbc] text-black rounded-md transition-all duration-300 hover:bg-[#f8bbd0] hover:shadow-lg hover:scale-105">
-              <Link
-                to={`/category/${category.category_name}`}
-                rel="noopener noreferrer"
-              >
-                View All
-              </Link>
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {category.products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+      {categories.length === 0 && searchQuery && !loading ? (
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">No products found</h2>
+          <p className="text-gray-600">
+            We couldn't find any products matching &quot;{searchQuery}&quot;
+          </p>
         </div>
-      ))}
+      ) : (
+        categories.map((category) => (
+          <div key={category.category_id} className="mb-12">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">{category.category_name}</h2>
+                <p className="text-gray-600">{category.category_description}</p>
+              </div>
+              {!searchQuery && (
+                <button className="px-4 py-2 bg-[#f0adbc] text-black rounded-md transition-all duration-300 hover:bg-[#f8bbd0] hover:shadow-lg hover:scale-105">
+                  <Link
+                    to={`/category/${category.category_name}`}
+                    rel="noopener noreferrer"
+                  >
+                    View All
+                  </Link>
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {category.products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 };

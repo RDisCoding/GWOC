@@ -75,6 +75,67 @@ router.get("/:id", async (req, res) => {
     }
 });
 
+router.get("/search", async (req, res) => {
+    try {
+      const { query } = req.query;
+      
+      if (!query) {
+        return res.json([]);
+      }
+  
+      const searchQuery = `
+        SELECT 
+          hamper_id,
+          name,
+          description,
+          price,
+          image_url,
+          is_bestseller,
+          rating,
+          review_count,
+          contents,
+          packaging_type,
+          occasion,
+          delivery_time,
+          hamper_type
+        FROM hampers
+        WHERE 
+          is_active = true 
+          AND (
+            LOWER(name) LIKE LOWER($1)
+            OR LOWER(COALESCE(description, '')) LIKE LOWER($1)
+            OR LOWER(COALESCE(occasion, '')) LIKE LOWER($1)
+            OR LOWER(COALESCE(packaging_type, '')) LIKE LOWER($1)
+            OR LOWER(COALESCE(hamper_type, '')) LIKE LOWER($1)
+            OR EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements(contents) AS content
+              WHERE LOWER(content->>'item') LIKE LOWER($1)
+            )
+          )
+        ORDER BY 
+          CASE WHEN LOWER(name) LIKE LOWER($1) THEN 0
+               WHEN LOWER(description) LIKE LOWER($1) THEN 1
+               ELSE 2
+          END,
+          created_at DESC;
+      `;
+  
+      const result = await pool.query(searchQuery, [`%${query}%`]);
+      
+      // Map hamper_id to id for frontend compatibility
+      const hampers = result.rows.map(hamper => ({
+        id: hamper.hamper_id,
+        ...hamper
+      }));
+      
+      res.json(hampers);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json("Server Error");
+    }
+  });
+  
 // Get random similar hampers
 router.get("/random/:id", async (req, res) => {
     try {

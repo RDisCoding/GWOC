@@ -560,3 +560,6 @@ ON current_orders(transaction_id);
 
 -- Optional: Add a comment to document the column
 COMMENT ON COLUMN current_orders.transaction_id IS 'PhonePe transaction ID for online payments';
+
+-- Add phone number column to users table
+ALTER TABLE users ADD COLUMN user_phone VARCHAR(15);

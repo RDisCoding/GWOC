@@ -85,14 +85,18 @@
 // export default Navbar;
 
 import { Store, Search, Package2, History, CakeSlice, ShoppingCart, User, LogIn, Grid } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
+import UserProfileDialog from '../components/UserProfileDialog'
 
-function Navbar({ isAuthenticated, setAuth, userName }) {
+function Navbar({ isAuthenticated, setAuth, userName, userEmail, userPhone }) {
   const [displayText, setDisplayText] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
   const [loopNum, setLoopNum] = useState(0)
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(true)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [userData, setUserData] = useState(null);
+  const navigate = useNavigate()
 
   const items = ["cupcake", "cake", "icecream", "brownie", "donut"]
   const period = 2000
@@ -105,6 +109,52 @@ function Navbar({ isAuthenticated, setAuth, userName }) {
 
     return () => clearInterval(ticker)
   }, [displayText, isDeleting, loopNum])
+
+  useEffect(() => {
+    const getUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setAuth(false);
+          return;
+        }
+  
+        const response = await fetch("http://localhost:5000/auth/user-data", {
+          method: "GET",
+          headers: { 
+            token: token
+          }
+        });
+  
+        if (!response.ok) {
+          throw new Error("Failed to fetch user data");
+        }
+  
+        const parseRes = await response.json();
+        setUserData(parseRes);
+      } catch (err) {
+        console.error(err.message);
+        setAuth(false);
+        localStorage.removeItem("token");
+      }
+    };
+  
+    if (isAuthenticated) {
+      getUserData();
+    } else {
+      setUserData(null);
+    }
+  }, [isAuthenticated, setAuth]);
+  
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const searchInput = e.target.querySelector('input');
+    const query = searchInput.value.trim();
+    
+    if (query) {
+      navigate(`/orders?q=${encodeURIComponent(query)}`);
+    }
+  };
 
   useEffect(() => {
     const status = localStorage.getItem("acceptingOrders") !== "false";
@@ -181,22 +231,24 @@ function Navbar({ isAuthenticated, setAuth, userName }) {
 
             {/* Search Section */}
             <div className="flex-1 max-w-xl mx-4 relative group">
-              <input
-                type="text"
-                className="w-full px-4 py-2 rounded-md border border-[#dcc8b7] 
-                bg-white focus:outline-none focus:border-pink-500 
-                transition-colors duration-200
-                group-hover:border-pink-400 text-black placeholder-black
-                appearance-none"
-                placeholder={`Search for ${displayText}${!isDeleting ? '|' : ''}`}
-              />
-              <button
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 
-                text-black hover:text-pink-500 transition-colors duration-200"
-                onClick={() => {/* Your search function */}}
-              >
-                <Search className="h-5 w-5" />
-              </button>
+              <form onSubmit={handleSearch}>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-md border border-[#dcc8b7] 
+                  bg-white focus:outline-none focus:border-pink-500 
+                  transition-colors duration-200
+                  group-hover:border-pink-400 text-black placeholder-black
+                  appearance-none"
+                  placeholder={`Search for ${displayText}${!isDeleting ? '|' : ''}`}
+                />
+                <button
+                  type="submit"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 
+                  text-black hover:text-pink-500 transition-colors duration-200"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+              </form>
             </div>
 
             {/* Navigation Section - Reordered */}
@@ -231,33 +283,43 @@ function Navbar({ isAuthenticated, setAuth, userName }) {
                 <span className="hidden sm:inline">Cart</span>
               </Link>
 
-              {/* Login/User Section */}
-              {isAuthenticated ? (
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1 text-black">
-                    <User className="h-5 w-5" />
-                    <span className="hidden sm:inline">Hello, {userName || 'User'}</span>
-                  </span>
-                  <button
-                    onClick={() => {
-                      localStorage.removeItem("token");
-                      setAuth(false);
-                    }}
-                    className="text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-md text-sm"
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  to="/login"
+              {/* User Profile Section*/}
+              {isAuthenticated && userData ? (
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setIsProfileOpen(true)}
                   className="flex items-center gap-1 text-black hover:text-[#d81b60] 
-                           transition-colors duration-200"
+                            transition-colors duration-200"
                 >
-                  <LogIn className="h-5 w-5" />
-                  <span className="hidden sm:inline">Login</span>
-                </Link>
-              )}
+                  <User className="h-5 w-5" />
+                  <span className="hidden sm:inline">
+                    Hello, {userData.user_name}
+                  </span>
+                </button>
+                <UserProfileDialog 
+                  isOpen={isProfileOpen}
+                  setIsOpen={setIsProfileOpen}
+                  userData={userData}
+                  onLogout={() => {
+                    localStorage.removeItem("token");
+                    setAuth(false);
+                  }}
+                />
+              </div>
+            ) : isAuthenticated ? (
+              <div className="flex items-center">
+                <span className="text-gray-600">Loading...</span>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-1 text-black hover:text-[#d81b60] 
+                        transition-colors duration-200"
+              >
+                <LogIn className="h-5 w-5" />
+                <span className="hidden sm:inline">Login</span>
+              </Link>
+            )}
             </nav>
           </div>
         </div>
