@@ -1,6 +1,68 @@
 const router = require("express").Router();
 const pool = require('../db');
 
+// Fetch bestsellers and new additions for home page
+router.get("/home", async (req, res) => {
+    try {
+        // Updated bestsellers query to match your schema
+        const bestsellersQuery = `
+            SELECT 
+                product_id as id,
+                name,
+                description,
+                price,
+                image_url,
+                rating,
+                review_count,
+                is_bestseller
+            FROM products
+            WHERE is_active = true 
+            AND is_bestseller = true
+            ORDER BY review_count DESC NULLS LAST
+            LIMIT 10
+        `;
+        
+        // Updated new additions query
+        const newAdditionsQuery = `
+            SELECT 
+                product_id as id,
+                name,
+                description,
+                price,
+                image_url,
+                rating,
+                review_count,
+                is_bestseller
+            FROM products
+            WHERE is_active = true
+            ORDER BY created_at DESC
+            LIMIT 10
+        `;
+        
+        const [bestsellers, newAdditions] = await Promise.all([
+            pool.query(bestsellersQuery),
+            pool.query(newAdditionsQuery)
+        ]);
+
+        // Add debug logging
+        console.log('Bestsellers count:', bestsellers.rows.length);
+        console.log('New additions count:', newAdditions.rows.length);
+        
+        res.json({
+            bestsellers: bestsellers.rows,
+            newAdditions: newAdditions.rows
+        });
+    } catch (err) {
+        console.error('Database Error:', err.message);
+        // Send a more detailed error response
+        res.status(500).json({ 
+            error: "Server Error", 
+            details: err.message,
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        });
+    }
+});
+
 router.get("/:id", async (req, res) => {
     try {
         const { id } = req.params;

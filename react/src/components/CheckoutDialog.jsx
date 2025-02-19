@@ -146,7 +146,7 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
             Pay on Takeaway
           </Button>
           <Button 
-            onClick={() => handlePaymentModeSelect('online')}
+            onClick={() => paymentHandler()}
             className="w-full bg-green-600"
           >
             Pay Online
@@ -185,6 +185,80 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
       )}
     </div>
   );
+
+  const amount = 500;
+  const currency = "INR";
+  const receiptId = "qwsaq1";
+
+  const paymentHandler = async (e) => {
+    if (e) e.preventDefault();  // Move this to the top
+    
+    try {
+      // Calculate amount in paise
+      const amountInPaise = amount * 100;
+      
+      // Create order
+      const response = await fetch("http://localhost:5000/order", {
+        method: "POST",
+        body: JSON.stringify({
+          amount: amountInPaise,  // Make sure this is in paise
+          currency: "INR",
+          receipt: receiptId,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
+  
+      const orderData = await response.json();
+      console.log("Order created:", orderData);
+  
+      var options = {
+        key: "rzp_test_8svjQ1m4bXekV2", // Store key in environment variable
+        amount: amountInPaise,
+        currency: "INR",
+        name: "Neutrons",
+        description: "Test Transaction",
+        image: "https://cdn.vectorstock.com/i/500p/17/37/atom-logo-icon-vector-53611737.jpg",
+        order_id: orderData.id, // Use the id from the order response
+        handler: function (response) {
+          console.log("Payment successful");
+          console.log("Payment ID:", response.razorpay_payment_id);
+          console.log("Order ID:", response.razorpay_order_id);
+          console.log("Signature:", response.razorpay_signature);
+          // Handle successful payment (update your database, show success message, etc.)
+        },
+        prefill: {
+          name: "The Analyzer",
+          email: "whatever@example.com",
+          contact: "9000090000"
+        },
+        notes: {
+          address: "Razorpay Corporate Office"
+        },
+        theme: {
+          color: "#3399cc"
+        }
+      };
+  
+      const rzp1 = new window.Razorpay(options);
+      
+      rzp1.on('payment.failed', function (response) {
+        console.error("Payment failed:", response.error);
+        // Show a more user-friendly error message
+        alert(`Payment failed: ${response.error.description}`);
+      });
+  
+      rzp1.open();
+    } catch (error) {
+      console.error("Error in payment handler:", error);
+      alert("Could not process payment. Please try again.");
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

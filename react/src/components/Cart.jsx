@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CheckoutDialog from './CheckoutDialog';
+import CheckoutDialog2 from './CheckoutDialog2';
+import CheckoutDialog3 from './CheckoutDialog3';
 
 const Cart = () => {
   const [cartData, setCartData] = useState({ items: [], total: 0 });
@@ -288,7 +290,7 @@ const Cart = () => {
           </div>
         </div>
       </div>
-      <CheckoutDialog 
+      <CheckoutDialog3 
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         cart={cartData}

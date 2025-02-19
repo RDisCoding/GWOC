@@ -549,3 +549,14 @@ CHECK (pickup_status IN ('pending', 'preparing', 'ready_for_pickup', 'picked_up'
 
 ALTER TABLE order_history
 ADD COLUMN payment_mode VARCHAR(50);
+
+-- Add transaction_id column to current_orders table
+ALTER TABLE current_orders
+ADD COLUMN transaction_id VARCHAR(255);
+
+-- Add an index on transaction_id for better query performance
+CREATE INDEX idx_current_orders_transaction_id 
+ON current_orders(transaction_id);
+
+-- Optional: Add a comment to document the column
+COMMENT ON COLUMN current_orders.transaction_id IS 'PhonePe transaction ID for online payments';

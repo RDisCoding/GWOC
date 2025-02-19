@@ -8,13 +8,50 @@ import AboutUs from "./AboutUs";
 import Reviews from "./Reviews";
 
 const Home = () => {
-  // State from original Home.jsx
   const [pendingReview, setPendingReview] = useState(null);
   const [showThankYou, setShowThankYou] = useState(false);
+  const [products, setProducts] = useState({
+    bestsellers: [],
+    newAdditions: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     checkPendingReviews();
+    fetchProducts();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      console.log('Fetching products...');
+      // Update the endpoint URL to include /products
+      const response = await axios.get('/products/home', {
+        baseURL: 'http://localhost:5000' // Add the base URL
+      });
+      
+      console.log('Products response:', response.data);
+      
+      // Add validation to ensure we have the expected data structure
+      if (response.data && (response.data.bestsellers || response.data.newAdditions)) {
+        setProducts({
+          bestsellers: response.data.bestsellers || [],
+          newAdditions: response.data.newAdditions || []
+        });
+      } else {
+        throw new Error('Invalid data structure received from server');
+      }
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError(
+        err.response?.data?.error || 
+        err.message || 
+        'Failed to fetch products'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const checkPendingReviews = async () => {
     try {
@@ -33,109 +70,37 @@ const Home = () => {
     setTimeout(() => setShowThankYou(false), 3000);
   };
 
-  const handleNavAction = async (action) => {
-    switch(action) {
-      case 'checkReviews':
-        await checkPendingReviews();
-        break;
-      case 'closeReview':
-        setPendingReview(null);
-        break;
-      // Add more actions as needed
-      default:
-        break;
-    }
-  };
-
-  // Product data from Ignore.jsx
-  const bestsellers = [
-    {
-      id: 1,
-      name: "Classic Vanilla Cupcake",
-      image: "https://sugargeekshow.com/wp-content/uploads/2022/08/vanilla_cupcake_featured_blog.jpg",
-      price: "$3.99",
-    },
-    {
-      id: 2,
-      name: "Classic Vanilla Cupcake",
-      image: "/placeholder.svg",
-      price: "$3.99",
-    },
-    {
-      id: 3,
-      name: "Classic Vanilla Cupcake",
-      image: "/placeholder.svg",
-      price: "$3.99",
-    },
-    {
-      id: 4,
-      name: "Classic Vanilla Cupcake",
-      image: "/placeholder.svg",
-      price: "$3.99",
-    },
-    {
-      id: 5,
-      name: "Classic Vanilla Cupcake",
-      image: "/placeholder.svg",
-      price: "$3.99",
-    }
-  ];
-
-  const newAdditions = [
-    {
-      id: 1,
-      name: "Rainbow Cake",
-      image: "/placeholder.svg",
-      price: "$24.99",
-    },
-    {
-      id: 2,
-      name: "Classic Vanilla Cupcake",
-      image: "https://sugargeekshow.com/wp-content/uploads/2022/08/vanilla_cupcake_featured_blog.jpg",
-      price: "$3.99",
-    },
-    {
-      id: 3,
-      name: "Classic Vanilla Cupcake",
-      image: "/placeholder.svg",
-      price: "$3.99",
-    },
-    {
-      id: 4,
-      name: "Classic Vanilla Cupcake",
-      image: "/placeholder.svg",
-      price: "$3.99",
-    },
-    {
-      id: 5,
-      name: "Classic Vanilla Cupcake",
-      image: "/placeholder.svg",
-      price: "$3.99",
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      
       <main className="flex-grow">
         <HeroCarousel />
         
         <div className="relative z-10">
           <CategoryNav />
         </div>
-
+        
         <div className="relative z-20 -mt-8">
-          <ProductSection title="Our Bestsellers" products={bestsellers} />
+          <ProductSection
+            title="Our Bestsellers"
+            products={products.bestsellers}
+            loading={loading}
+            error={error}
+          />
         </div>
-
+        
         <div className="relative z-20 -mt-8">
-          <ProductSection title="New Additions" products={newAdditions} />
+          <ProductSection
+            title="New Additions"
+            products={products.newAdditions}
+            loading={loading}
+            error={error}
+          />
         </div>
-
+        
         <div className="relative z-20 -mt-8">
           <AboutUs />
         </div>
-
+        
         <div className="relative z-20 -mt-8">
           <Reviews />
         </div>
@@ -148,7 +113,7 @@ const Home = () => {
           onSubmit={handleReviewSubmit}
         />
       )}
-
+      
       {showThankYou && (
         <div className="fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
           Thank you for your review!
