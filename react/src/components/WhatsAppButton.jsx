@@ -37,7 +37,7 @@ export default function WhatsAppButton() {
               </button>
               <div className="text-center mt-2">
                 <h3 className="text-lg font-semibold mb-4">Scan to chat with us!</h3>
-                <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="WhatsApp QR Code" className="w-[160px] h-[160px] mx-auto" />
+                <img src="react/public/images/WQR.png" alt="WhatsApp QR Code" className="w-[160px] h-[160px] mx-auto" />
               </div>
             </div>
           </motion.div>
