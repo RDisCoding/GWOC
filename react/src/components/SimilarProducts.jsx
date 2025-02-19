@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const SimilarProducts = ({ currentProductId }) => {
@@ -69,14 +70,23 @@ const SimilarProducts = ({ currentProductId }) => {
   };
 
   const ProductCard = ({ product }) => (
-    <div className="min-w-[280px] bg-white rounded-lg overflow-hidden group relative">
+    <Link
+      to={`/product/${product.product_id}`}
+      className="min-w-[280px] bg-white rounded-lg overflow-hidden group relative block"
+    >
       <div className="relative">
         <img
           src={product.image_url || "/api/placeholder/300/300"}
           alt={product.name}
           className="w-full h-48 object-cover"
         />
-        <button className="absolute top-2 right-2 p-1.5 bg-white rounded-full opacity-80 hover:opacity-100">
+        <button 
+          className="absolute top-2 right-2 p-1.5 bg-white rounded-full opacity-80 hover:opacity-100"
+          onClick={(e) => {
+            e.preventDefault();
+            // Add to wishlist functionality
+          }}
+        >
           <Heart className="w-5 h-5 text-gray-600" />
         </button>
       </div>
@@ -87,7 +97,7 @@ const SimilarProducts = ({ currentProductId }) => {
           Earliest Delivery: In 3 hours
         </div>
       </div>
-    </div>
+    </Link>
   );
 
   if (loading) {

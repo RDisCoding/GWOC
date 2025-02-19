@@ -12,6 +12,7 @@ const Hampers = () => {
   const searchQuery = searchParams.get('q') || '';
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (searchQuery) {
       searchHampers(searchQuery);
     } else {

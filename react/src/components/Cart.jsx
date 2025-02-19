@@ -15,6 +15,7 @@ const Cart = () => {
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(true);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const status = localStorage.getItem("acceptingOrders") !== "false";
     setIsAcceptingOrders(status);
     

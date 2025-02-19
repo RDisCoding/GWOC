@@ -14,6 +14,7 @@ const ProductDetails = () => {
   const [nameOnCake, setNameOnCake] = useState('');
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     fetchProductDetails();
   }, [id]);
 
