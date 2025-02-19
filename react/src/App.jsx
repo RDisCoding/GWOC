@@ -1,43 +1,78 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ShoppingCart } from 'lucide-react';
+
+//components
+import Login from './components/Login';
+import Register from './components/Register';
+import Dashboard from './components/Dashboard';
 import Navbar from './components/Navbar';
 import HomePage from './components/HomePage';
 import OrdersPage from './components/OrdersPage';
 import ProductPage from './components/ProductPage';
 import HampersPage from './components/HampersPage';
 import CartPage from './components/CartPage';
-import { ShoppingCart } from 'lucide-react';
 
-const App = () => {
-  const [cart, setCart] = useState([]);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-
-  const addToCart = (item) => {
-    setCart([...cart, item]);
+  const App = () => {
+    return (
+        <Router>
+          <AppContent />
+        </Router>
+    );
   };
 
-  return (
-    <Router>
+  const AppContent = () => {
+    const { user, login, logout } = useAuth(); // Now inside AuthProvider
+    const [cart, setCart] = useState([]);
+  
+    const addToCart = (item) => {
+      setCart([...cart, item]);
+    };
+  
+    return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar cartCount={cart.length} setIsLoginOpen={setIsLoginOpen} />
+        <Navbar cartCount={cart.length} />
         <main className="container mx-auto px-4 py-8">
           <Routes>
-            <Route path="/" element={<HomePage setIsLoginOpen={setIsLoginOpen} />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/product/:id" element={<ProductPage addToCart={addToCart} />} />
             <Route path="/hampers" element={<HampersPage addToCart={addToCart} />} />
             <Route path="/cart" element={<CartPage cart={cart} setCart={setCart} />} />
           </Routes>
         </main>
-
-        {/* Login/Signup Dialog */}
-        {isLoginOpen && (
-          <LoginDialog isOpen={isLoginOpen} setIsOpen={setIsLoginOpen} />
-        )}
+  
       </div>
-    </Router>
-  );
-};
+    );
+  };
+
+//   return (
+//     <AuthProvider>
+//     <Router>
+//       <div className="min-h-screen bg-gray-50">
+//         <Navbar cartCount={cart.length} setIsLoginOpen={setIsLoginOpen} />
+//         <main className="container mx-auto px-4 py-8">
+//           <Routes>
+//             <Route path="/" element={<HomePage setIsLoginOpen={setIsLoginOpen} />} />
+//             <Route path="/orders" element={<OrdersPage />} />
+//             <Route path="/product/:id" element={<ProductPage addToCart={addToCart} />} />
+//             <Route path="/hampers" element={<HampersPage addToCart={addToCart} />} />
+//             <Route path="/cart" element={<CartPage cart={cart} setCart={setCart} />} />
+//           </Routes>
+//         </main>
+
+//         {/* Login/Signup Dialog */}
+//         {isLoginOpen && (
+//           <AuthDialog isOpen={isLoginOpen} setIsOpen={setIsLoginOpen} />
+//         )}
+//       </div>
+//     </Router>
+//     </AuthProvider>
+//   );
+// };
 
 const LoginDialog = ({ isOpen, setIsOpen }) => {
   const [isLogin, setIsLogin] = useState(true);
