@@ -88,63 +88,64 @@ const CheckoutDialog3 = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) 
     };
   
     // Inside CheckoutDialog3 component, update the initiateOnlinePayment function:
-    const initiateOnlinePayment = async () => {
-      const total = calculateTotal();
-      const transactionId = 'T' + Date.now();
-      
-      const paymentData = {
-        name: 'Customer',
-        amount: total,
-        number: phone,
-        MUID: "MUID" + Date.now(),
-        transactionId: transactionId,
-        cart_items: cart.items // Add cart items to payment data
-      };
-    
-      try {
-        // Save cart data with transaction ID
-        const cartData = {
-          cart,
-          hampers,
-          phone,
-          total,
-          transactionId,
-          timestamp: Date.now()
-        };
-        
-        console.log('Saving cart data with transaction ID:', transactionId);
-        localStorage.setItem(`pendingCartData_${transactionId}`, JSON.stringify(cartData));
+    // In CheckoutDialog3.jsx, update the initiateOnlinePayment function:
+const initiateOnlinePayment = async () => {
+  const total = calculateTotal();
+  const transactionId = 'T' + Date.now();
   
-        const response = await axios.post('http://localhost:5000/order', paymentData);
-        
-        if (response.data && response.data.data.instrumentResponse.redirectInfo.url) {
-          // Show redirect dialog
-          const redirectUrl = response.data.data.instrumentResponse.redirectInfo.url;
-          
-          // Create and show the redirect dialog
-          const dialogContent = document.createElement('div');
-          dialogContent.innerHTML = `
-            <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div class="bg-white p-6 rounded-lg text-center">
-                <p class="mb-4">Redirecting you to the payment page...</p>
-                <div class="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
-              </div>
-            </div>
-          `;
-          document.body.appendChild(dialogContent);
-          
-          // Redirect after a short delay
-          setTimeout(() => {
-            window.location.href = redirectUrl;
-          }, 2000);
-        }
-      } catch (error) {
-        console.error('Payment initiation error:', error);
-        localStorage.removeItem(`pendingCartData_${transactionId}`);
-        alert('Failed to initiate payment. Please try again.');
-        setIsProcessing(false);
-      }
+  const paymentData = {
+    name: 'Customer',
+    amount: total,
+    number: phone,
+    MUID: "MUID" + Date.now(),
+    transactionId: transactionId,
+    cart_items: cart.items // Add cart items to payment data
+  };
+
+  try {
+    // Save cart data with transaction ID
+    const cartData = {
+      cart,
+      hampers,
+      phone,
+      total,
+      transactionId,
+      timestamp: Date.now()
     };
+    
+    console.log('Saving cart data with transaction ID:', transactionId);
+    localStorage.setItem(`pendingCartData_${transactionId}`, JSON.stringify(cartData));
+
+    const response = await axios.post('http://localhost:5000/order', paymentData);
+    
+    if (response.data && response.data.data.instrumentResponse.redirectInfo.url) {
+      // Show redirect dialog
+      const redirectUrl = response.data.data.instrumentResponse.redirectInfo.url;
+      
+      // Create and show the redirect dialog
+      const dialogContent = document.createElement('div');
+      dialogContent.innerHTML = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white p-6 rounded-lg text-center">
+            <p class="mb-4">Redirecting you to the payment page...</p>
+            <div class="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(dialogContent);
+      
+      // Redirect after a short delay
+      setTimeout(() => {
+        window.location.href = redirectUrl;
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Payment initiation error:', error);
+    localStorage.removeItem(`pendingCartData_${transactionId}`);
+    alert('Failed to initiate payment. Please try again.');
+    setIsProcessing(false);
+  }
+};
 
     const handleTakeawayPayment = async () => {
       const errors = validatePhone();

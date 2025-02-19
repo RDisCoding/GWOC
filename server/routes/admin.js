@@ -24,10 +24,10 @@
 // router.put("/current-orders/:orderId/pickup", async (req, res) => {
 //   const { orderId } = req.params;
 //   const client = await pool.connect();
-  
+
 //   try {
 //     await client.query('BEGIN');
-    
+
 //     // First, fetch the current order to ensure it exists and get its details
 //     const currentOrder = await client.query(
 //       'SELECT * FROM current_orders WHERE order_id = $1',
@@ -97,12 +97,12 @@
 //     );
 
 //     await client.query('COMMIT');
-    
+
 //     res.json({
 //       message: "Order moved to history successfully",
 //       order: historyResult.rows[0]
 //     });
-    
+
 //   } catch (error) {
 //     await client.query('ROLLBACK');
 //     console.error("Error moving order:", error);
@@ -208,28 +208,28 @@
 // router.delete("/categories/:categoryId", async (req, res) => {
 //   const { categoryId } = req.params;
 //   const client = await pool.connect();
-  
+
 //   try {
 //     await client.query('BEGIN');
-    
+
 //     // Delete all products in the category first
 //     await client.query(
 //       "DELETE FROM products WHERE category_id = $1",
 //       [categoryId]
 //     );
-    
+
 //     // Then delete the category
 //     const result = await client.query(
 //       "DELETE FROM categories WHERE category_id = $1 RETURNING *",
 //       [categoryId]
 //     );
-    
+
 //     await client.query('COMMIT');
-    
+
 //     if (result.rowCount === 0) {
 //       return res.status(404).json({ error: "Category not found" });
 //     }
-    
+
 //     res.json({ message: "Category deleted successfully" });
 //   } catch (err) {
 //     await client.query('ROLLBACK');
@@ -284,11 +284,11 @@
 //       "DELETE FROM products WHERE product_id = $1 RETURNING *",
 //       [productId]
 //     );
-    
+
 //     if (result.rowCount === 0) {
 //       return res.status(404).json({ error: "Product not found" });
 //     }
-    
+
 //     res.json({ message: "Product deleted successfully" });
 //   } catch (err) {
 //     console.error("Error deleting product:", err);
@@ -304,11 +304,11 @@
 //       "UPDATE products SET is_active = NOT is_active WHERE product_id = $1 RETURNING *",
 //       [productId]
 //     );
-    
+
 //     if (result.rowCount === 0) {
 //       return res.status(404).json({ error: "Product not found" });
 //     }
-    
+
 //     res.json(result.rows[0]);
 //   } catch (err) {
 //     console.error("Error toggling product status:", err);
@@ -335,7 +335,7 @@
 //       LEFT JOIN users u ON r.user_id = u.user_id
 //       ORDER BY r.created_at DESC
 //     `);
-    
+
 //     res.json(result.rows);
 //   } catch (err) {
 //     console.error("Error fetching reviews:", err);
@@ -347,21 +347,21 @@
 // router.patch("/reviews/:reviewId/toggle-homepage", async (req, res) => {
 //   const { reviewId } = req.params;
 //   const client = await pool.connect();
-  
+
 //   try {
 //     await client.query('BEGIN');
-    
+
 //     // Check if we're trying to add to homepage and how many are already there
 //     const { rows: [{ display_status }] } = await client.query(
 //       "SELECT display_on_homepage as display_status FROM reviews WHERE review_id = $1",
 //       [reviewId]
 //     );
-    
+
 //     if (!display_status) {
 //       const { rows: [{ count }] } = await client.query(
 //         "SELECT COUNT(*) FROM reviews WHERE display_on_homepage = true"
 //       );
-      
+
 //       // Limit to 5 reviews on homepage
 //       if (parseInt(count) >= 5) {
 //         await client.query('ROLLBACK');
@@ -370,7 +370,7 @@
 //         });
 //       }
 //     }
-    
+
 //     // Toggle the status
 //     const result = await client.query(
 //       `UPDATE reviews 
@@ -379,13 +379,13 @@
 //        RETURNING *`,
 //       [reviewId]
 //     );
-    
+
 //     await client.query('COMMIT');
-    
+
 //     if (result.rowCount === 0) {
 //       return res.status(404).json({ error: "Review not found" });
 //     }
-    
+
 //     res.json(result.rows[0]);
 //   } catch (err) {
 //     await client.query('ROLLBACK');
@@ -416,7 +416,7 @@
 //       WHERE r.display_on_homepage = true
 //       ORDER BY r.created_at DESC
 //     `);
-    
+
 //     res.json(result.rows);
 //   } catch (err) {
 //     console.error("Error fetching homepage reviews:", err);
@@ -428,7 +428,7 @@
 // router.get("/orders/pending-reviews", async (req, res) => {
 //   // In a real app, you'd get the user_id from the session/token
 //   const userId = req.user.id; 
-  
+
 //   try {
 //     const result = await pool.query(`
 //       SELECT 
@@ -442,7 +442,7 @@
 //       AND oh.reviewed = false
 //       ORDER BY oh.picked_up_at DESC
 //     `, [userId]);
-    
+
 //     res.json(result.rows);
 //   } catch (err) {
 //     console.error("Error fetching pending reviews:", err);
@@ -505,7 +505,7 @@
 // // Mark order as reviewed
 // router.patch("/orders/:orderId/mark-reviewed", async (req, res) => {
 //   const { orderId } = req.params;
-  
+
 //   try {
 //     const result = await pool.query(`
 //       UPDATE order_history 
@@ -513,11 +513,11 @@
 //       WHERE order_id = $1
 //       RETURNING *
 //     `, [orderId]);
-    
+
 //     if (result.rowCount === 0) {
 //       return res.status(404).json({ error: "Order not found" });
 //     }
-    
+
 //     res.json(result.rows[0]);
 //   } catch (err) {
 //     console.error("Error marking order as reviewed:", err);
@@ -553,17 +553,21 @@ router.get("/current-orders", async (req, res) => {
 
 router.put("/current-orders/:orderId/status", async (req, res) => {
   const { orderId } = req.params;
-  const { status, rejection_reason } = req.body; // Add rejection_reason from request
+  const { status, rejection_reason } = req.body;
   const client = await pool.connect();
   
   try {
     await client.query('BEGIN');
     
-    // First check if order exists
-    const currentOrder = await client.query(
-      'SELECT * FROM current_orders WHERE order_id = $1',
-      [orderId]
-    );
+    const currentOrder = await client.query(`
+      SELECT 
+        c.*, 
+        u.user_name,
+        u.user_email
+      FROM current_orders c
+      JOIN users u ON c.user_id = u.user_id
+      WHERE c.order_id = $1
+    `, [orderId]);
     
     if (currentOrder.rows.length === 0) {
       throw new Error('Order not found');
@@ -572,13 +576,11 @@ router.put("/current-orders/:orderId/status", async (req, res) => {
     const orderData = currentOrder.rows[0];
     const now = new Date();
 
-    console.log("Order Items before inserting:", orderData.items);
-    
     if (status === 'rejected') {
       // Insert into order_history with correct columns
       const parsedItems = JSON.stringify(orderData.items); // Convert array to JSON string
 
-        await client.query(`
+      await client.query(`
           INSERT INTO order_history (
             order_id, 
             user_id, 
@@ -597,29 +599,51 @@ router.put("/current-orders/:orderId/status", async (req, res) => {
           )
           VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         `, [
-          orderData.order_id,
-          orderData.user_id,
-          parsedItems,  // ✅ Ensure JSONB compatibility
-          orderData.total,
-          orderData.created_at,
-          orderData.contact_phone,
-          'rejected',
-          'rejected',
-          now,
-          rejection_reason || null,
-          false, // reviewed
-          false, // review_request_sent
-          false, // reviews_processed
-          'rejected' // status
-        ]);
+        orderData.order_id,
+        orderData.user_id,
+        parsedItems,  // ✅ Ensure JSONB compatibility
+        orderData.total,
+        orderData.created_at,
+        orderData.contact_phone,
+        'rejected',
+        'rejected',
+        now,
+        rejection_reason || null,
+        false, // reviewed
+        false, // review_request_sent
+        false, // reviews_processed
+        'rejected' // status
+      ]);
 
       // Delete from current_orders
       await client.query(
         'DELETE FROM current_orders WHERE order_id = $1',
         [orderId]
       );
+      // Send rejection notification
+      const twilioClient = req.app.get('twilioClient');
+      
+      const itemsList = orderData.items
+        .map(item => `  • ${item.name} x${item.quantity} - ₹${item.price * item.quantity}`)
+        .join('\n');
+
+      const message = `⚠️ Order Rejected ⚠️\n\n
+      Hello ${orderData.user_name},\n
+      We regret to inform you that your order could not be processed.\n
+      🔹 Order ID: ${orderData.order_id}\n
+      🔹 Items:\n${itemsList}\n
+      🔹 Total: ₹${Number(orderData.total)}\n
+      Reason: ${rejection_reason || "Unavailable ingredients or operational constraints"}\n
+      We apologize for the inconvenience. Please contact us for any queries.\n\n
+      🍩 Bindi's Cupcakery 🍩\n📞 Contact: +918849130189`;
+
+      await twilioClient.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE,
+        to: `whatsapp:+91${orderData.contact_phone}`
+      });
+
     } else if (status === 'accepted') {
-      // Update current_orders
       await client.query(`
         UPDATE current_orders 
         SET 
@@ -628,19 +652,49 @@ router.put("/current-orders/:orderId/status", async (req, res) => {
         WHERE order_id = $3
       `, ['accepted', now, orderId]);
     }
-    
+
     await client.query('COMMIT');
-    res.json({ 
+
+    // Send WhatsApp notification for accepted orders
+    if (status === 'accepted') {
+      const twilioClient = req.app.get('twilioClient');
+
+      // Format items list
+      const itemsList = orderData.items
+        .map(item => `  • ${item.name} x${item.quantity} - ₹${item.price * item.quantity}`)
+        .join('\n');
+
+      // Construct message
+      const message = `✅ Order Accepted ✅\n\n
+      Hello ${orderData.user_name},\n
+      Great news! Your order has been accepted and is being prepared with care.\n
+      🔹 Order ID: ${orderData.order_id}\n
+      🔹 Items:\n${itemsList}\n
+      🔹 Total: ₹${orderData.total}\n
+      🔹 Estimated Time: ${orderData.estimated_time || "30"} mins\n
+      We’ll notify you once it’s ready for pickup/delivery.\n
+      Thank you for choosing us! 🍰\n\n
+      🍩 Bindi's Cupcakery 🍩\n📞 Contact: +918849130189`;
+
+      // Send WhatsApp
+      await twilioClient.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE,
+        to: `whatsapp:+91${orderData.contact_phone}`
+      });
+    }
+
+    res.json({
       message: `Order ${status} successfully`,
       order: currentOrder.rows[0]
     });
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error("Error updating order status:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Internal Server Error",
-      details: error.message 
+      details: error.message
     });
   } finally {
     client.release();
@@ -651,31 +705,31 @@ router.put("/current-orders/:orderId/status", async (req, res) => {
 // router.put("/current-orders/:orderId/pickup-status", async (req, res) => {
 //   const { orderId } = req.params;
 //   const client = await pool.connect();
-  
+
 //   try {
 //     const currentOrder = await client.query(
 //       'SELECT pickup_status FROM current_orders WHERE order_id = $1',
 //       [orderId]
 //     );
-    
+
 //     if (currentOrder.rows.length === 0) {
 //       return res.status(404).json({ error: "Order not found" });
 //     }
-    
+
 //     const newStatus = currentOrder.rows[0].pickup_status === 'preparing' 
 //       ? 'ready_for_pickup' 
 //       : 'preparing';
-    
+
 //     await client.query(
 //       'UPDATE current_orders SET pickup_status = $1 WHERE order_id = $2',
 //       [newStatus, orderId]
 //     );
-    
+
 //     res.json({ 
 //       message: "Pickup status updated successfully",
 //       new_status: newStatus
 //     });
-    
+
 //   } catch (error) {
 //     console.error("Error updating pickup status:", error);
 //     res.status(500).json({ error: "Internal Server Error" });
@@ -691,27 +745,64 @@ router.put("/current-orders/:orderId/pickup-status", async (req, res) => {
   try {
     await client.query('BEGIN');
     
-    // Get current pickup status
-    const currentOrder = await client.query(
-      'SELECT pickup_status FROM current_orders WHERE order_id = $1',
-      [orderId]
-    );
+    // Get current order details with user info
+    const currentOrder = await client.query(`
+      SELECT 
+        c.*, 
+        u.user_name,
+        u.user_email
+      FROM current_orders c
+      JOIN users u ON c.user_id = u.user_id
+      WHERE c.order_id = $1
+    `, [orderId]);
     
     if (currentOrder.rows.length === 0) {
       throw new Error('Order not found');
     }
     
-    // Toggle between 'preparing' and 'ready_for_pickup'
-    const currentStatus = currentOrder.rows[0].pickup_status;
+    const orderData = currentOrder.rows[0];
+    const currentStatus = orderData.pickup_status;
     const newStatus = currentStatus === 'ready_for_pickup' ? 'preparing' : 'ready_for_pickup';
-    
+
     // Update pickup status
     await client.query(
       'UPDATE current_orders SET pickup_status = $1 WHERE order_id = $2',
       [newStatus, orderId]
     );
-    
+
     await client.query('COMMIT');
+
+    // Send WhatsApp notification only when marking as ready_for_pickup
+    if (newStatus === 'ready_for_pickup') {
+      const twilioClient = req.app.get('twilioClient');
+      
+      // Format items list
+      const itemsList = orderData.items
+        .map(item => `  • ${item.name} x${item.quantity} - ₹${item.price * item.quantity}`)
+        .join('\n');
+
+      // Construct message
+      const message = `🚀 Order Ready for Pickup 🚀\n\n
+      Hello ${orderData.user_name},\n
+      Your order is now ready for pickup!\n
+      Here are your order details:\n
+      🔹 Order ID: ${orderData.order_id}\n
+      🔹 Items:\n${itemsList}\n
+      🔹 Total: ₹${orderData.total}\n
+      🔹 Pickup Location: ${orderData.pickup_location ||'Cloud kitchen in Parle Point, Surat'}
+      Please collect it at your earliest convenience. Enjoy your treats! 🍩✨\n
+      Thank you for choosing us! 🍰\n
+      We look forward to serving you again soon.🎂\n\n
+      🍩 Bindi's Cupcakery 🍩\n📞 Contact: +918849130189`;
+
+      // Send WhatsApp
+      await twilioClient.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE,
+        to: `whatsapp:+91${orderData.contact_phone}`
+      });
+    }
+
     res.json({ 
       message: "Pickup status updated successfully",
       new_status: newStatus
@@ -732,10 +823,10 @@ router.put("/current-orders/:orderId/pickup-status", async (req, res) => {
 router.put("/current-orders/:orderId/pickup", async (req, res) => {
   const { orderId } = req.params;
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     // First, fetch the current order to ensure it exists and get its details
     const currentOrder = await client.query(
       'SELECT * FROM current_orders WHERE order_id = $1',
@@ -805,12 +896,12 @@ router.put("/current-orders/:orderId/pickup", async (req, res) => {
     );
 
     await client.query('COMMIT');
-    
+
     res.json({
       message: "Order moved to history successfully",
       order: historyResult.rows[0]
     });
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error("Error moving order:", error);
@@ -916,28 +1007,28 @@ router.post("/categories", async (req, res) => {
 router.delete("/categories/:categoryId", async (req, res) => {
   const { categoryId } = req.params;
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     // Delete all products in the category first
     await client.query(
       "DELETE FROM products WHERE category_id = $1",
       [categoryId]
     );
-    
+
     // Then delete the category
     const result = await client.query(
       "DELETE FROM categories WHERE category_id = $1 RETURNING *",
       [categoryId]
     );
-    
+
     await client.query('COMMIT');
-    
+
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Category not found" });
     }
-    
+
     res.json({ message: "Category deleted successfully" });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -992,11 +1083,11 @@ router.delete("/products/:productId", async (req, res) => {
       "DELETE FROM products WHERE product_id = $1 RETURNING *",
       [productId]
     );
-    
+
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Product not found" });
     }
-    
+
     res.json({ message: "Product deleted successfully" });
   } catch (err) {
     console.error("Error deleting product:", err);
@@ -1012,11 +1103,11 @@ router.patch("/products/:productId/toggle-status", async (req, res) => {
       "UPDATE products SET is_active = NOT is_active WHERE product_id = $1 RETURNING *",
       [productId]
     );
-    
+
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Product not found" });
     }
-    
+
     res.json(result.rows[0]);
   } catch (err) {
     console.error("Error toggling product status:", err);
@@ -1043,7 +1134,7 @@ router.get("/reviews", async (req, res) => {
       LEFT JOIN users u ON r.user_id = u.user_id
       ORDER BY r.created_at DESC
     `);
-    
+
     res.json(result.rows);
   } catch (err) {
     console.error("Error fetching reviews:", err);
@@ -1055,23 +1146,30 @@ router.get("/reviews", async (req, res) => {
 router.patch("/reviews/:reviewId/toggle-homepage", async (req, res) => {
   const { reviewId } = req.params;
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     // Check if we're trying to add to homepage and how many are already there
     const { rows: [{ display_status }] } = await client.query(
       "SELECT display_on_homepage as display_status FROM reviews WHERE review_id = $1",
       [reviewId]
     );
-    
+
     if (!display_status) {
       const { rows: [{ count }] } = await client.query(
         "SELECT COUNT(*) FROM reviews WHERE display_on_homepage = true"
       );
-      
+
+      // Limit to 5 reviews on homepage
+      if (parseInt(count) >= 5) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error: "Maximum number of homepage reviews reached (5). Please remove one before adding another."
+        });
+      }
     }
-    
+
     // Toggle the status
     const result = await client.query(
       `UPDATE reviews 
@@ -1080,13 +1178,13 @@ router.patch("/reviews/:reviewId/toggle-homepage", async (req, res) => {
        RETURNING *`,
       [reviewId]
     );
-    
+
     await client.query('COMMIT');
-    
+
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Review not found" });
     }
-    
+
     res.json(result.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1117,7 +1215,7 @@ router.get("/reviews/homepage", async (req, res) => {
       WHERE r.display_on_homepage = true
       ORDER BY r.created_at DESC
     `);
-    
+
     res.json(result.rows);
   } catch (err) {
     console.error("Error fetching homepage reviews:", err);
@@ -1128,8 +1226,8 @@ router.get("/reviews/homepage", async (req, res) => {
 // Get orders pending review for a user
 router.get("/orders/pending-reviews", async (req, res) => {
   // In a real app, you'd get the user_id from the session/token
-  const userId = req.user.id; 
-  
+  const userId = req.user.id;
+
   try {
     const result = await pool.query(`
       SELECT 
@@ -1143,7 +1241,7 @@ router.get("/orders/pending-reviews", async (req, res) => {
       AND oh.reviewed = false
       ORDER BY oh.picked_up_at DESC
     `, [userId]);
-    
+
     res.json(result.rows);
   } catch (err) {
     console.error("Error fetching pending reviews:", err);
@@ -1206,7 +1304,7 @@ router.post("/reviews/:orderId", async (req, res) => {
 // Mark order as reviewed
 router.patch("/orders/:orderId/mark-reviewed", async (req, res) => {
   const { orderId } = req.params;
-  
+
   try {
     const result = await pool.query(`
       UPDATE order_history 
@@ -1214,11 +1312,11 @@ router.patch("/orders/:orderId/mark-reviewed", async (req, res) => {
       WHERE order_id = $1
       RETURNING *
     `, [orderId]);
-    
+
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "Order not found" });
     }
-    
+
     res.json(result.rows[0]);
   } catch (err) {
     console.error("Error marking order as reviewed:", err);

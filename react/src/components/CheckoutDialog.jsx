@@ -62,9 +62,9 @@ const CheckoutDialog = ({ isOpen, onClose, cart, hampers, onPaymentComplete }) =
 
   const validatePhone = () => {
     const errors = {};
-    if (!phone || !phone.match(/^\+?[1-9]\d{1,14}$/)) {
-      errors.phone = 'Valid phone number required';
-      return errors;
+    
+    if (!phone || !phone.match(/^\+?[1-9]\d{9,14}$/)) {
+      errors.phone = 'Valid phone number with country code required';
     }
     return {};
   };
