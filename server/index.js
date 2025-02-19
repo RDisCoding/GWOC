@@ -3,6 +3,8 @@ const app = express();
 const cors = require('cors');  
 const pool = require('./db'); // Your database connection
 const auth = require('./middleware/authorization');
+require('dotenv').config(); // Add at top
+const twilio = require('twilio');
 const axios = require('axios');
 const bodyParser = require("body-parser");
 const crypto = require('crypto');
@@ -19,6 +21,14 @@ app.use(bodyParser.urlencoded({
 let salt_key = process.env.SALT_KEY
 let merchant_id = process.env.MERCHANT_ID
 
+const TwilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+const whatsappRoutes = require("./routes/whatsapp");
+app.use("/api/whatsapp", whatsappRoutes);
+
+
 // routes
 // register and login routes
 app.use('/auth', require('./routes/jwtAuth'));
@@ -30,6 +40,9 @@ app.use("/cart", require("./routes/cart"));
 app.use('/admin', require('./routes/admin'));
 app.use("/api/reviews", require("./routes/reviews"));
 app.use("/hampers", require("./routes/hampers"));
+
+app.set('twilioClient', TwilioClient); // Make available to routes
+
 app.use('/track', require('./routes/orderTracking'));
 
 app.post("/order", async (req, res) => {
@@ -91,7 +104,6 @@ app.post("/order", async (req, res) => {
     }
     
   })
-  // Merging
 
 //   app.post("/status", async (req, res) => {
 //   const merchantTransactionId = req.query.id;
