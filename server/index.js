@@ -3,6 +3,8 @@ const app = express();
 const cors = require('cors');  
 const pool = require('./db'); // Your database connection
 const auth = require('./middleware/authorization');
+require('dotenv').config(); // Add at top
+const twilio = require('twilio');
 const axios = require('axios');
 const bodyParser = require("body-parser");
 const crypto = require('crypto');
@@ -19,6 +21,14 @@ app.use(bodyParser.urlencoded({
 let salt_key = process.env.SALT_KEY
 let merchant_id = process.env.MERCHANT_ID
 
+const TwilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+const whatsappRoutes = require("./routes/whatsapp");
+app.use("/api/whatsapp", whatsappRoutes);
+
+
 // routes
 // register and login routes
 app.use('/auth', require('./routes/jwtAuth'));
@@ -30,6 +40,9 @@ app.use("/cart", require("./routes/cart"));
 app.use('/admin', require('./routes/admin'));
 app.use("/api/reviews", require("./routes/reviews"));
 app.use("/hampers", require("./routes/hampers"));
+
+app.set('twilioClient', TwilioClient); // Make available to routes
+
 app.use('/track', require('./routes/orderTracking'));
 
 app.post("/order", async (req, res) => {
@@ -92,41 +105,6 @@ app.post("/order", async (req, res) => {
     
   })
 
-//   app.post("/status", async (req, res) => {
-//   const merchantTransactionId = req.query.id;
-//   const merchantId = merchant_id;
-  
-//   const keyIndex = 1;
-//   const string = `/pg/v1/status/${merchantId}/${merchantTransactionId}` + salt_key;
-//   const sha256 = crypto.createHash('sha256').update(string).digest('hex');
-//   const checksum = sha256 + "###" + keyIndex;
-
-//   try {
-//     const response = await axios({
-//       method: 'GET',
-//       url: `https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/status/${merchantId}/${merchantTransactionId}`,
-//       headers: {
-//         accept: 'application/json',
-//         'Content-Type': 'application/json',
-//         'X-VERIFY': checksum,
-//         'X-MERCHANT-ID': `${merchantId}`
-//       }
-//     });
-
-//     if (response.data.success === true) {
-//       // Redirect to frontend success page
-//       return res.redirect('http://localhost:5173/success');
-//     } else {
-//       // Redirect to frontend failure page
-//       return res.redirect('http://localhost:5173/failure');
-//     }
-//   } catch (error) {
-//     console.error('Payment status check failed:', error);
-//     // Redirect to frontend failure page in case of error
-//     return res.redirect('http://localhost:5173/failure');
-//   }
-// });
-
 app.post("/status", async (req, res) => {
   const merchantTransactionId = req.query.id;
   const merchantId = merchant_id;
@@ -161,35 +139,7 @@ app.post("/status", async (req, res) => {
   }
 });
 
-// app.get('/verify-payment/:transactionId', async (req, res) => {
-//   const merchantTransactionId = req.params.transactionId;
-//   const merchantId = merchant_id;
-  
-//   const keyIndex = 1;
-//   const string = `/pg/v1/status/${merchantId}/${merchantTransactionId}${salt_key}`;
-//   const sha256 = crypto.createHash('sha256').update(string).digest('hex');
-//   const checksum = `${sha256}###${keyIndex}`;
-
-//   try {
-//     const response = await axios.get(
-//       `https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/status/${merchantId}/${merchantTransactionId}`,
-//       {
-//         headers: {
-//           'X-VERIFY': checksum,
-//           'X-MERCHANT-ID': merchantId
-//         }
-//       }
-//     );
-
-//     // Properly check PhonePe's response code
-//     const isSuccess = response.data.code === 'PAYMENT_SUCCESS';
-//     res.json({ success: isSuccess });
-//   } catch (error) {
-//     console.error('Payment verification failed:', error);
-//     res.status(500).json({ success: false, error: error.message });
-//   }
-// });
-
+// In server/index.js, add this endpoint if not already present
 app.get('/verify-payment/:transactionId', async (req, res) => {
   const merchantTransactionId = req.params.transactionId;
   const merchantId = merchant_id;
@@ -249,103 +199,3 @@ app.get('/verify-payment/:transactionId', async (req, res) => {
     app.listen(5000, () => {
   console.log('Server is running on port 5000');
 });
-
-// app.post("/status", async (req, res) => {
-    
-  //   const merchantTransactionId = req.query.id
-  //   const merchantId = merchant_id
-    
-  //   const keyIndex = 1;
-  // const string = `/pg/v1/status/${merchantId}/${merchantTransactionId}` + salt_key;
-  // const sha256 = crypto.createHash('sha256').update(string).digest('hex');
-  // const checksum = sha256 + "###" + keyIndex;
-
-  // const options = {
-  //     method: 'GET',
-  //     url: `https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/status/${merchantId}/${merchantTransactionId}`,
-  //     headers: {
-  //       accept: 'application/json',
-  //       'Content-Type': 'application/json',
-  //         'X-VERIFY': checksum,
-  //         'X-MERCHANT-ID': `${merchantId}`
-  //     }
-  //   };
-
-  // // CHECK PAYMENT STATUS
-  // axios.request(options).then(async (response) => {
-  //         if (response.data.success === true) {
-  //             const url = `http://localhost:5173/success`
-  //             return res.redirect(url)
-  //           } else {
-  //             const url = `http://localhost:5173/failure`
-  //             return res.redirect(url)
-  //           }
-  //     })
-  //     .catch((error) => {
-  //       console.error(error);
-  //     });
-
-  //   })
-
-// // Modify your order endpoint like this
-// app.post('/order', async (req, res) => {
-//   const razorpay = new Razorpay({
-//     key_id: process.env.RAZORPAY_KEY_ID,
-//     key_secret: process.env.RAZORPAY_KEY_SECRET
-//   });
-
-//   const options = {
-//     amount: req.body.amount, 
-//     currency: req.body.currency,
-//     receipt: req.body.receipt,
-//     payment_capture: 1    
-//   };
-
-//   console.log("Creating order with options:", options);
-
-//   try {
-//     const order = await razorpay.orders.create(options);
-
-//     if (!order) {
-//       return res.status(500).send("Error creating order");
-//     }
-
-//     res.json({
-//       order_id: order.id,
-//       currency: order.currency,
-//       amount: order.amount
-//     })      
-
-//     console.log("Order created:", order);
-    
-//   } catch (error) {
-//     res.status(500).send("Internal Server Error")
-//   }
-
-// });
-
-// app.get('/payment/:paymentId', async (req, res) => {
-// const {paymentId} = req.params;
-
-// const razorpay = new Razorpay({
-//   key_id:process.env.RAZORPAY_KEY_ID,
-//   key_secret: process.env.RAZORPAY_KEY_SECRET
-// })
-
-// try {
-//   const payment = await razorpay.payments.fetch(paymentId)
-
-//   if(!payment){
-//     return res.status(500).json("Error at razorpay loading")
-//   }
-
-//   res.json({
-//     status: payment.status,
-//     method: payment.method,
-//     amount: payment.amount,
-//     currency: payment.currency
-//   })
-// } catch(error){
-//   res.status(500).json("failed to fetch")
-// }
-// })
