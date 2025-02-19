@@ -2,136 +2,8 @@
 const router = require("express").Router();
 const pool = require('../db');
 const authorization = require("../middleware/authorization");
-
-// // Add item to cart
-// router.post("/add", authorization, async (req, res) => {
-//     const client = await pool.connect();
-//     try {
-//         await client.query('BEGIN');
-
-//         console.log("Adding to cart for user_id:", req.user); // Debugging log
-        
-//         if (!req.user) {  // ✅ Use req.user instead of req.user_id
-//             throw new Error("User ID is required");
-//         }
-
-//         const { product_id, quantity, price, customizations } = req.body;
-
-//         // Get or create cart for user
-//         let cartResult = await client.query(
-//             'SELECT id FROM carts WHERE user_id = $1',
-//             [req.user]  // ✅ Use req.user
-//         );
-
-//         let cart_id;
-//         if (cartResult.rows.length === 0) {
-//             console.log("Creating new cart for user:", req.user);
-            
-//             const newCartResult = await client.query(
-//                 'INSERT INTO carts (user_id) VALUES ($1) RETURNING id',
-//                 [req.user]  // ✅ Use req.user
-//             );
-//             cart_id = newCartResult.rows[0].id;
-//         } else {
-//             cart_id = cartResult.rows[0].id;
-//         }
-
-//         // Add item to cart
-//         const cartItem = await client.query(
-//             `INSERT INTO cart_items 
-//             (cart_id, product_id, quantity, price_at_time, customizations) 
-//             VALUES ($1, $2, $3, $4, $5) 
-//             RETURNING id`,
-//             [cart_id, product_id, quantity, price, JSON.stringify(customizations)]
-//         );
-
-//         await client.query('COMMIT');
-//         res.json({ success: true, cart_item_id: cartItem.rows[0].id });
-//     } catch (err) {
-//         await client.query('ROLLBACK');
-//         console.error("Cart addition error:", err.message);
-//         res.status(500).json({ error: err.message });
-//     } finally {
-//         client.release();
-//     }
-// });
-
-// // Add item to cart
-// router.post("/add", authorization, async (req, res) => {
-//     const client = await pool.connect();
-//     try {
-//         await client.query('BEGIN');
-
-//         console.log("Adding to cart for user_id:", req.user);
-
-//         if (!req.user) {
-//             throw new Error("User ID is required");
-//         }
-
-//         const { product_id, quantity, price, customizations } = req.body;
-
-//         // Get or create cart for user
-//         let cartResult = await client.query(
-//             'SELECT id FROM carts WHERE user_id = $1',
-//             [req.user]
-//         );
-
-//         let cart_id;
-//         if (cartResult.rows.length === 0) {
-//             console.log("Creating new cart for user:", req.user);
-//             const newCartResult = await client.query(
-//                 'INSERT INTO carts (user_id) VALUES ($1) RETURNING id',
-//                 [req.user]
-//             );
-//             cart_id = newCartResult.rows[0].id;
-//         } else {
-//             cart_id = cartResult.rows[0].id;
-//         }
-
-//         // Prepare customizations value (JSON string or NULL)
-//         const customizationsValue = customizations !== undefined ? JSON.stringify(customizations) : null;
-
-//         // Check for existing item with same product and customizations
-//         const existingItem = await client.query(
-//             `SELECT id, quantity FROM cart_items 
-//              WHERE cart_id = $1 
-//              AND product_id = $2 
-//              AND customizations IS NOT DISTINCT FROM $3`,
-//             [cart_id, product_id, customizationsValue]
-//         );
-
-//         let cartItem;
-//         if (existingItem.rows.length > 0) {
-//             // Update quantity of existing item
-//             const newQuantity = existingItem.rows[0].quantity + quantity;
-//             cartItem = await client.query(
-//                 `UPDATE cart_items 
-//                  SET quantity = $1 
-//                  WHERE id = $2 
-//                  RETURNING id`,
-//                 [newQuantity, existingItem.rows[0].id]
-//             );
-//         } else {
-//             // Insert new item
-//             cartItem = await client.query(
-//                 `INSERT INTO cart_items 
-//                  (cart_id, product_id, quantity, price_at_time, customizations) 
-//                  VALUES ($1, $2, $3, $4, $5) 
-//                  RETURNING id`,
-//                 [cart_id, product_id, quantity, price, customizationsValue]
-//             );
-//         }
-
-//         await client.query('COMMIT');
-//         res.json({ success: true, cart_item_id: cartItem.rows[0].id });
-//     } catch (err) {
-//         await client.query('ROLLBACK');
-//         console.error("Cart addition error:", err.message);
-//         res.status(500).json({ error: err.message });
-//     } finally {
-//         client.release();
-//     }
-// });
+const twilio = require('twilio');
+const TWILIO_PHONE = process.env.TWILIO_PHONE;
 
 // Add item to cart
 router.post("/add", authorization, async (req, res) => {
@@ -303,113 +175,6 @@ router.post("/add2", authorization, async (req, res) => {
         res.status(500).json({ error: "Server Error" });
     }
 });
-// // Remove item from cart
-// router.delete("/remove/:itemId", authorization, async (req, res) => {
-//     try {
-//         const { itemId } = req.params;
-//         const { user_id } = req;
-
-//         const deleteQuery = `
-//             DELETE FROM cart_items ci
-//             USING carts c
-//             WHERE ci.id = $1 
-//             AND ci.cart_id = c.id 
-//             AND c.user_id = $2
-//         `;
-
-//         const result = await pool.query(deleteQuery, [itemId, user_id]);
-
-//         if (result.rowCount === 0) {
-//             return res.status(404).json("Cart item not found");
-//         }
-
-//         res.json({ success: true });
-//     } catch (err) {
-//         console.error(err.message);
-//         res.status(500).json("Server Error");
-//     }
-// });
-
-// // Get cart items
-// router.get("/", authorization, async (req, res) => {
-//     try {
-//         const { user_id } = req;
-//         const query = `
-//             SELECT 
-//                 ci.id as cart_item_id,
-//                 ci.quantity,
-//                 ci.price_at_time,
-//                 ci.customizations,
-//                 p.product_id,
-//                 p.name,
-//                 p.image_url,
-//                 p.description
-//             FROM cart_items ci
-//             JOIN carts c ON ci.cart_id = c.id
-//             JOIN products p ON ci.product_id = p.product_id
-//             WHERE c.user_id = $1
-//         `;
-
-//         const result = await pool.query(query, [user_id]);
-//         res.json(result.rows);
-//     } catch (err) {
-//         console.error(err.message);
-//         res.status(500).json("Server Error");
-//     }
-// });
-
-// router.get("/", authorization, async (req, res) => {
-//     try {
-//         const query = `
-//             WITH cart_summary AS (
-//                 SELECT 
-//                     ci.id as cart_item_id,
-//                     ci.quantity,
-//                     ci.price_at_time,
-//                     ci.customizations,
-//                     p.product_id,
-//                     p.name,
-//                     p.image_url,
-//                     p.description,
-//                     p.category_id,
-//                     (ci.quantity * ci.price_at_time) as item_total
-//                 FROM cart_items ci
-//                 JOIN carts c ON ci.cart_id = c.id
-//                 JOIN products p ON ci.product_id = p.product_id
-//                 WHERE c.user_id = $1
-//             )
-//             SELECT 
-//                 *,
-//                 (SELECT SUM(item_total) FROM cart_summary) as cart_total
-//             FROM cart_summary
-//         `;
-
-//         const result = await pool.query(query, [req.user]);
-        
-//         // Format the response
-//         const cartItems = result.rows;
-//         const total = cartItems.length > 0 ? cartItems[0].cart_total : 0;
-
-//         // res.json({
-//         //     items: cartItems.map(item => ({
-//         //         ...item,
-//         //         customizations: item.customizations ? JSON.parse(item.customizations) : null
-//         //     })),
-//         //     total: total
-//         // });
-
-//         res.json({
-//             items: cartItems.map(item => ({
-//                 ...item,
-//                customizations: typeof item.customizations === "string" ? JSON.parse(item.customizations) : item.customizations
-//             })),
-//             total: total
-//         });
-//     } catch (err) {
-//         console.error(err.message);
-//         res.status(500).json("Server Error");
-//     }
-// });
 
 // Modified GET cart items route
 router.get("/", authorization, async (req, res) => {
@@ -469,38 +234,6 @@ router.get("/", authorization, async (req, res) => {
     }
 });
 
-// // Update cart item quantity
-// router.put("/update/:itemId", authorization, async (req, res) => {
-//     try {
-//         const { itemId } = req.params;
-//         const { quantity } = req.body;
-        
-//         if (quantity < 1) {
-//             return res.status(400).json("Quantity must be at least 1");
-//         }
-
-//         const updateQuery = `
-//             UPDATE cart_items ci
-//             SET quantity = $1
-//             FROM carts c
-//             WHERE ci.id = $2 
-//             AND ci.cart_id = c.id 
-//             AND c.user_id = $3
-//             RETURNING *
-//         `;
-
-//         const result = await pool.query(updateQuery, [quantity, itemId, req.user]);
-
-//         if (result.rowCount === 0) {
-//             return res.status(404).json("Cart item not found");
-//         }
-
-//         res.json({ success: true, updated_item: result.rows[0] });
-//     } catch (err) {
-//         console.error(err.message);
-//         res.status(500).json("Server Error");
-//     }
-// });
 
 // Update cart item quantity
 router.put("/update/:id", authorization, async (req, res) => {
@@ -524,32 +257,6 @@ router.put("/update/:id", authorization, async (req, res) => {
     }
 });
 
-// // Remove item from cart
-// router.delete("/remove/:itemId", authorization, async (req, res) => {
-//     try {
-//         const { itemId } = req.params;
-
-//         const deleteQuery = `
-//             DELETE FROM cart_items ci
-//             USING carts c
-//             WHERE ci.id = $1 
-//             AND ci.cart_id = c.id 
-//             AND c.user_id = $2
-//             RETURNING *
-//         `;
-
-//         const result = await pool.query(deleteQuery, [itemId, req.user]);
-
-//         if (result.rowCount === 0) {
-//             return res.status(404).json("Cart item not found");
-//         }
-
-//         res.json({ success: true });
-//     } catch (err) {
-//         console.error(err.message);
-//         res.status(500).json("Server Error");
-//     }
-// });
 
 // Remove item from cart
 router.delete("/remove/:id", authorization, async (req, res) => {
@@ -595,124 +302,6 @@ router.get("/add-ons", authorization, async (req, res) => {
     }
 });
 
-// router.post("/checkout", authorization, async (req, res) => {
-//     const client = await pool.connect();
-//     try {
-//         await client.query('BEGIN');
-
-//         // For online payments, we might not have cart items
-//         if (req.body.payment_mode === 'online' && req.body.transaction_id) {
-//             // Create order with minimal data for online payments
-//             const orderRes = await client.query(`
-//                 INSERT INTO current_orders 
-//                     (user_id, total, contact_phone, payment_mode, transaction_id, admin_status)
-//                 VALUES ($1, $2, $3, $4, $5, 'pending')
-//                 RETURNING *;
-//             `, [
-//                 req.user,
-//                 req.body.total || 0,
-//                 req.body.phone || '',
-//                 'online',
-//                 req.body.transaction_id
-//             ]);
-
-//             await client.query('COMMIT');
-
-//             return res.json({
-//                 success: true,
-//                 order: orderRes.rows[0],
-//                 payment_status: 'completed'
-//             });
-//         }
-
-//         // 1. Get cart details with both products and hampers
-//         const cartItemsQuery = `
-//             SELECT 
-//                 ci.*,
-//                 COALESCE(p.name, h.name) as name,
-//                 COALESCE(p.image_url, h.image_url) as image_url,
-//                 CASE 
-//                     WHEN ci.product_id IS NOT NULL THEN 'product'
-//                     ELSE 'hamper'
-//                 END as item_type,
-//                 u.user_email,
-//                 u.user_name
-//             FROM cart_items ci
-//             JOIN carts c ON ci.cart_id = c.id
-//             LEFT JOIN products p ON ci.product_id = p.product_id
-//             LEFT JOIN hampers h ON ci.hamper_id = h.hamper_id
-//             JOIN users u ON c.user_id = u.user_id
-//             WHERE c.user_id = $1
-//         `;
-
-//         const cartRes = await client.query(cartItemsQuery, [req.user]);
-
-//         // Also include hampers from the request body if they exist
-//         let allItems = [...cartRes.rows];
-//         if (req.body.hampers && req.body.hampers.length > 0) {
-//             allItems = [...allItems, ...req.body.hampers.map(hamper => ({
-//                 ...hamper,
-//                 item_type: 'hamper',
-//                 price_at_time: hamper.price
-//             }))];
-//         }
-
-//         if (allItems.length === 0) {
-//             throw new Error('Cart is empty');
-//         }
-
-//         // 2. Create current order with combined items
-//         const orderRes = await client.query(`
-//             INSERT INTO current_orders 
-//                 (user_id, items, total, contact_phone, payment_mode, admin_status)
-//             VALUES ($1, $2, $3, $4, $5, 'pending')
-//             RETURNING *;
-//         `, [
-//             req.user,
-//             JSON.stringify(allItems.map(item => ({
-//                 product_id: item.product_id,
-//                 hamper_id: item.hamper_id,
-//                 name: item.name,
-//                 quantity: item.quantity,
-//                 price: item.price_at_time,
-//                 customizations: item.customizations,
-//                 item_type: item.item_type
-//             }))),
-//             req.body.total,
-//             req.body.phone,
-//             req.body.payment_mode
-//         ]);
-
-//         // 3. Clear cart after order is placed
-//         await client.query(`
-//             DELETE FROM cart_items 
-//             WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1);
-//         `, [req.user]);
-
-//         await client.query('COMMIT');
-
-//         res.json({
-//             success: true,
-//             order: orderRes.rows[0],
-//             payment_status: 'completed'
-//         });
-
-//     } catch (err) {
-//         await client.query('ROLLBACK');
-//         console.error("Checkout error:", {
-//             error: err.message,
-//             stack: err.stack,
-//             body: req.body
-//         });
-//         res.status(500).json({ 
-//             error: err.message,
-//             payment_status: 'failed',
-//             details: 'Order creation failed'
-//         });
-//     } finally {
-//         client.release();
-//     }
-// });
 
 router.post("/checkout", authorization, async (req, res) => {
     const client = await pool.connect();
@@ -722,59 +311,101 @@ router.post("/checkout", authorization, async (req, res) => {
         await client.query('BEGIN');
 
         // For online payments
-        if (req.body.payment_mode === 'online' && req.body.transaction_id) {
-            // First check if an order with this transaction_id already exists
-            const existingOrder = await client.query(
-                'SELECT * FROM current_orders WHERE transaction_id = $1',
-                [req.body.transaction_id]
-            );
+        // server/routes/cart.js - modify the checkout handler
+// Update the online payment section in the checkout route
 
-            if (existingOrder.rows.length > 0) {
-                await client.query('ROLLBACK');
-                return res.json({
-                    success: true,
-                    order: existingOrder.rows[0],
-                    payment_status: 'completed'
-                });
-            }
+// For online payments
+if (req.body.payment_mode === 'online' && req.body.transaction_id) {
+    // First check if an order with this transaction_id already exists
+    const existingOrder = await client.query(
+        'SELECT * FROM current_orders WHERE transaction_id = $1',
+        [req.body.transaction_id]
+    );
 
-            // Only proceed if cart items exist and total is greater than 0
-            if (!req.body.cart_items || !req.body.cart_items.length || !req.body.total) {
-                await client.query('ROLLBACK');
-                return res.status(400).json({
-                    error: 'Invalid order data',
-                    payment_status: 'failed'
-                });
-            }
+    if (existingOrder.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.json({
+            success: true,
+            order: existingOrder.rows[0],
+            payment_status: 'completed'
+        });
+    }
 
-            const orderRes = await client.query(`
-                INSERT INTO current_orders 
-                    (user_id, total, contact_phone, payment_mode, transaction_id, 
-                     items, admin_status, order_status, pickup_status)
-                VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'pending', 'pending')
-                RETURNING *;
-            `, [
-                req.user,
-                req.body.total,
-                req.body.phone,
-                'online',
-                req.body.transaction_id,
-                JSON.stringify(req.body.cart_items)
-            ]);
+    // Only proceed if cart items exist and total is greater than 0
+    if (!req.body.cart_items || !req.body.cart_items.length || !req.body.total) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+            error: 'Invalid order data',
+            payment_status: 'failed'
+        });
+    }
 
-            // Clear cart after successful order
-            await client.query(`
-                DELETE FROM cart_items 
-                WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1);
-            `, [req.user]);
+    const orderRes = await client.query(`
+        INSERT INTO current_orders 
+            (user_id, total, contact_phone, payment_mode, transaction_id, 
+             items, admin_status, order_status, pickup_status)
+        VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'pending', 'pending')
+        RETURNING *;
+    `, [
+        req.user,
+        req.body.total,
+        req.body.phone,
+        'online',
+        req.body.transaction_id,
+        JSON.stringify(req.body.cart_items)
+    ]);
 
-            await client.query('COMMIT');
-            return res.json({
-                success: true,
-                order: orderRes.rows[0],
-                payment_status: 'completed'
-            });
-        }
+    // Clear cart after successful order
+    await client.query(`
+        DELETE FROM cart_items 
+        WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1);
+    `, [req.user]);
+    
+    // Send WhatsApp notification for online payment
+    try {
+        const order = orderRes.rows[0];
+        
+        // Get user details
+        const userRes = await client.query(
+            'SELECT user_name FROM users WHERE user_id = $1',
+            [req.user]
+        );
+        
+        // Format items
+        const itemsList = order.items
+            .map(item => `  • ${item.name} x${item.quantity} - ₹${item.price_at_time * item.quantity}`)
+            .join('\n');
+        
+        // Construct message
+        const message = `🎂 Order Placed Successfully 🎂\n\n
+        Hello ${userRes.rows[0].user_name},\n
+        Your order has been placed successfully! Here are your order details:\n
+        🔹 Order ID: ${order.order_id}\n
+        🔹 Items:\n${itemsList}\n
+        🔹 Total: ₹${order.total}\n
+        🔹 Payment Method: Online (Completed)\n
+        We are now processing your order. You'll receive updates once it is accepted.\n\n
+        🍩 Bindi's Cupcakery 🍩\n📞 Contact: +918849130189`;
+        
+        // Send WhatsApp
+        await req.app.get('twilioClient').messages.create({
+            body: message,
+            from: process.env.TWILIO_PHONE,
+            to: `whatsapp:+91${order.contact_phone}`
+        });
+        
+        console.log('WhatsApp notification sent for online payment');
+    } catch (error) {
+        console.error('WhatsApp notification failed for online payment:', error.message);
+    }
+
+    await client.query('COMMIT');
+    return res.json({
+        success: true,
+        order: orderRes.rows[0],
+        payment_status: 'completed'
+    });
+}
 
         // Regular checkout flow for non-online payments
         const orderRes = await client.query(`
@@ -800,6 +431,42 @@ router.post("/checkout", authorization, async (req, res) => {
         }
 
         await client.query('COMMIT');
+
+        // WhatsApp notification logic
+try {
+    const order = orderRes.rows[0];
+    
+    // Get user details
+    const userRes = await pool.query(
+      'SELECT user_name FROM users WHERE user_id = $1',
+      [req.user]
+    );
+    
+    // Format items
+    const itemsList = order.items
+      .map(item => `  • ${item.name} x${item.quantity} - ₹${item.price * item.quantity}`)
+      .join('\n');
+  
+    // Construct message
+    const message = `🎂 Order Placed Successfully 🎂\n\n
+    Hello ${userRes.rows[0].user_name},\n
+    Your order has been placed successfully! Here are your order details:\n
+    🔹 Order ID: ${order.order_id}\n
+    🔹 Items:\n${itemsList}\n
+    🔹 Total: ₹${order.total}\n
+    We are now processing your order. You’ll receive updates once it is accepted.\n\n
+    🍩 Bindi's Cupcakery 🍩\n📞 Contact: +918849130189`;
+  
+    // Send WhatsApp
+    await req.app.get('twilioClient').messages.create({
+      body: message,
+      from: TWILIO_PHONE,
+      to: `whatsapp:+91${order.contact_phone}`
+    });
+  } catch (error) {
+    console.error('WhatsApp notification failed:', error.message);
+  }
+  
 
         res.json({
             success: true,
