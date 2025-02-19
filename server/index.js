@@ -91,6 +91,7 @@ app.post("/order", async (req, res) => {
     }
     
   })
+  // Merging
 
 //   app.post("/status", async (req, res) => {
 //   const merchantTransactionId = req.query.id;
