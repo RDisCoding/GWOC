@@ -24,6 +24,10 @@ import PageLoader from "./components/PageLoader";
 import Footer from "./components/Footer";
 import WhatsAppButton from "./components/WhatsAppButton";
 import TrackOrder from './components/TrackOrder';
+import Payment from "./components/Payment";
+import Success from "./components/Success";
+import Failure from "./components/Failure";
+// import SearchPage from "./components/SearchPage";
 
 const AdminProtectedRoute = ({ children }) => {
   const isAdmin = localStorage.getItem("isAdmin") === "true";
@@ -173,6 +177,10 @@ const AppContent = () => {
                 <Route path="/category/:categoryName" element={<ViewAllProducts />} />
                 <Route path="/hampers/:id" element={<HamperDetails />} />
                 <Route path="/track-order" element={<TrackOrder />} />
+                <Route path="/payment" element={<Payment />} />
+                <Route path="/success/" element={<Success />} />
+                <Route path="/failure/" element={<Failure />} />
+                {/* <Route path="/search" element={<SearchPage />} /> */}
                 <Route
                   path="/admin/login"
                   element={

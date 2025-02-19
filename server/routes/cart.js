@@ -595,74 +595,209 @@ router.get("/add-ons", authorization, async (req, res) => {
     }
 });
 
+// router.post("/checkout", authorization, async (req, res) => {
+//     const client = await pool.connect();
+//     try {
+//         await client.query('BEGIN');
+
+//         // For online payments, we might not have cart items
+//         if (req.body.payment_mode === 'online' && req.body.transaction_id) {
+//             // Create order with minimal data for online payments
+//             const orderRes = await client.query(`
+//                 INSERT INTO current_orders 
+//                     (user_id, total, contact_phone, payment_mode, transaction_id, admin_status)
+//                 VALUES ($1, $2, $3, $4, $5, 'pending')
+//                 RETURNING *;
+//             `, [
+//                 req.user,
+//                 req.body.total || 0,
+//                 req.body.phone || '',
+//                 'online',
+//                 req.body.transaction_id
+//             ]);
+
+//             await client.query('COMMIT');
+
+//             return res.json({
+//                 success: true,
+//                 order: orderRes.rows[0],
+//                 payment_status: 'completed'
+//             });
+//         }
+
+//         // 1. Get cart details with both products and hampers
+//         const cartItemsQuery = `
+//             SELECT 
+//                 ci.*,
+//                 COALESCE(p.name, h.name) as name,
+//                 COALESCE(p.image_url, h.image_url) as image_url,
+//                 CASE 
+//                     WHEN ci.product_id IS NOT NULL THEN 'product'
+//                     ELSE 'hamper'
+//                 END as item_type,
+//                 u.user_email,
+//                 u.user_name
+//             FROM cart_items ci
+//             JOIN carts c ON ci.cart_id = c.id
+//             LEFT JOIN products p ON ci.product_id = p.product_id
+//             LEFT JOIN hampers h ON ci.hamper_id = h.hamper_id
+//             JOIN users u ON c.user_id = u.user_id
+//             WHERE c.user_id = $1
+//         `;
+
+//         const cartRes = await client.query(cartItemsQuery, [req.user]);
+
+//         // Also include hampers from the request body if they exist
+//         let allItems = [...cartRes.rows];
+//         if (req.body.hampers && req.body.hampers.length > 0) {
+//             allItems = [...allItems, ...req.body.hampers.map(hamper => ({
+//                 ...hamper,
+//                 item_type: 'hamper',
+//                 price_at_time: hamper.price
+//             }))];
+//         }
+
+//         if (allItems.length === 0) {
+//             throw new Error('Cart is empty');
+//         }
+
+//         // 2. Create current order with combined items
+//         const orderRes = await client.query(`
+//             INSERT INTO current_orders 
+//                 (user_id, items, total, contact_phone, payment_mode, admin_status)
+//             VALUES ($1, $2, $3, $4, $5, 'pending')
+//             RETURNING *;
+//         `, [
+//             req.user,
+//             JSON.stringify(allItems.map(item => ({
+//                 product_id: item.product_id,
+//                 hamper_id: item.hamper_id,
+//                 name: item.name,
+//                 quantity: item.quantity,
+//                 price: item.price_at_time,
+//                 customizations: item.customizations,
+//                 item_type: item.item_type
+//             }))),
+//             req.body.total,
+//             req.body.phone,
+//             req.body.payment_mode
+//         ]);
+
+//         // 3. Clear cart after order is placed
+//         await client.query(`
+//             DELETE FROM cart_items 
+//             WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1);
+//         `, [req.user]);
+
+//         await client.query('COMMIT');
+
+//         res.json({
+//             success: true,
+//             order: orderRes.rows[0],
+//             payment_status: 'completed'
+//         });
+
+//     } catch (err) {
+//         await client.query('ROLLBACK');
+//         console.error("Checkout error:", {
+//             error: err.message,
+//             stack: err.stack,
+//             body: req.body
+//         });
+//         res.status(500).json({ 
+//             error: err.message,
+//             payment_status: 'failed',
+//             details: 'Order creation failed'
+//         });
+//     } finally {
+//         client.release();
+//     }
+// });
+
 router.post("/checkout", authorization, async (req, res) => {
     const client = await pool.connect();
     try {
+        console.log('Checkout request body:', req.body);
+        
         await client.query('BEGIN');
 
-        // 1. Get cart details with both products and hampers
-        const cartItemsQuery = `
-            SELECT 
-                ci.*,
-                COALESCE(p.name, h.name) as name,
-                COALESCE(p.image_url, h.image_url) as image_url,
-                CASE 
-                    WHEN ci.product_id IS NOT NULL THEN 'product'
-                    ELSE 'hamper'
-                END as item_type,
-                u.user_email,
-                u.user_name
-            FROM cart_items ci
-            JOIN carts c ON ci.cart_id = c.id
-            LEFT JOIN products p ON ci.product_id = p.product_id
-            LEFT JOIN hampers h ON ci.hamper_id = h.hamper_id
-            JOIN users u ON c.user_id = u.user_id
-            WHERE c.user_id = $1
-        `;
+        // For online payments
+        if (req.body.payment_mode === 'online' && req.body.transaction_id) {
+            // First check if an order with this transaction_id already exists
+            const existingOrder = await client.query(
+                'SELECT * FROM current_orders WHERE transaction_id = $1',
+                [req.body.transaction_id]
+            );
 
-        const cartRes = await client.query(cartItemsQuery, [req.user]);
+            if (existingOrder.rows.length > 0) {
+                await client.query('ROLLBACK');
+                return res.json({
+                    success: true,
+                    order: existingOrder.rows[0],
+                    payment_status: 'completed'
+                });
+            }
 
-        // Also include hampers from the request body if they exist
-        let allItems = [...cartRes.rows];
-        if (req.body.hampers && req.body.hampers.length > 0) {
-            allItems = [...allItems, ...req.body.hampers.map(hamper => ({
-                ...hamper,
-                item_type: 'hamper',
-                price_at_time: hamper.price
-            }))];
+            // Only proceed if cart items exist and total is greater than 0
+            if (!req.body.cart_items || !req.body.cart_items.length || !req.body.total) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                    error: 'Invalid order data',
+                    payment_status: 'failed'
+                });
+            }
+
+            const orderRes = await client.query(`
+                INSERT INTO current_orders 
+                    (user_id, total, contact_phone, payment_mode, transaction_id, 
+                     items, admin_status, order_status, pickup_status)
+                VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'pending', 'pending')
+                RETURNING *;
+            `, [
+                req.user,
+                req.body.total,
+                req.body.phone,
+                'online',
+                req.body.transaction_id,
+                JSON.stringify(req.body.cart_items)
+            ]);
+
+            // Clear cart after successful order
+            await client.query(`
+                DELETE FROM cart_items 
+                WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1);
+            `, [req.user]);
+
+            await client.query('COMMIT');
+            return res.json({
+                success: true,
+                order: orderRes.rows[0],
+                payment_status: 'completed'
+            });
         }
 
-        if (allItems.length === 0) {
-            throw new Error('Cart is empty');
-        }
-
-        // 2. Create current order with combined items
+        // Regular checkout flow for non-online payments
         const orderRes = await client.query(`
             INSERT INTO current_orders 
-                (user_id, items, total, contact_phone, payment_mode, admin_status)
-            VALUES ($1, $2, $3, $4, $5, 'pending')
+                (user_id, items, total, contact_phone, payment_mode, 
+                 admin_status, order_status, pickup_status)
+            VALUES ($1, $2, $3, $4, $5, 'pending', 'pending', 'pending')
             RETURNING *;
         `, [
             req.user,
-            JSON.stringify(allItems.map(item => ({
-                product_id: item.product_id,
-                hamper_id: item.hamper_id,
-                name: item.name,
-                quantity: item.quantity,
-                price: item.price_at_time,
-                customizations: item.customizations,
-                item_type: item.item_type
-            }))),
+            JSON.stringify(req.body.cart_items || []),
             req.body.total,
             req.body.phone,
             req.body.payment_mode
         ]);
 
-        // 3. Clear cart after order is placed
-        await client.query(`
-            DELETE FROM cart_items 
-            WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1);
-        `, [req.user]);
+        // Clear cart after successful order placement
+        if (req.body.cart_items && req.body.cart_items.length > 0) {
+            await client.query(`
+                DELETE FROM cart_items 
+                WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1);
+            `, [req.user]);
+        }
 
         await client.query('COMMIT');
 
@@ -674,10 +809,15 @@ router.post("/checkout", authorization, async (req, res) => {
 
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error("Checkout error:", err.message);
+        console.error("Checkout error:", {
+            error: err.message,
+            stack: err.stack,
+            body: req.body
+        });
         res.status(500).json({ 
             error: err.message,
-            payment_status: 'failed'
+            payment_status: 'failed',
+            details: 'Order creation failed'
         });
     } finally {
         client.release();
